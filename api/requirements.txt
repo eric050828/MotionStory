@@ -1,4 +1,4 @@
-# Prefer binary wheels to avoid Rust compilation
+# Prefer binary wheels to avoid Rust compilation on Render.com
 --prefer-binary
 
 # FastAPI & ASGI Server
