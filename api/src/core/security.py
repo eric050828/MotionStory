@@ -11,8 +11,8 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import os
 
-# 密碼雜湊設定
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# 密碼雜湊設定 (使用 Argon2 - 更安全且無 Rust 依賴)
+pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 # JWT 設定
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-in-production")
