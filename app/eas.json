@@ -10,6 +10,9 @@
       "channel": "development",
       "env": {
         "API_URL": "http://localhost:8000"
+      },
+      "android": {
+        "buildType": "apk"
       }
     },
     "preview": {
