@@ -19,12 +19,10 @@
         "API_URL": "https://motionstory-api.onrender.com"
       },
       "ios": {
-        "simulator": true,
-        "bundleIdentifier": "com.motionstory.app.preview"
+        "simulator": true
       },
       "android": {
-        "buildType": "apk",
-        "applicationId": "com.motionstory.app.preview"
+        "buildType": "apk"
       }
     },
     "production": {
@@ -34,12 +32,10 @@
       },
       "ios": {
         "autoIncrement": "buildNumber",
-        "bundleIdentifier": "com.motionstory.app",
         "image": "latest"
       },
       "android": {
         "autoIncrement": "versionCode",
-        "applicationId": "com.motionstory.app",
         "buildType": "app-bundle",
         "image": "latest"
       }
