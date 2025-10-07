@@ -13,19 +13,22 @@ import json
 def initialize_firebase():
     """初始化 Firebase Admin SDK"""
     try:
-        # Decode private key from base64 (for environment variable storage)
-        private_key_decoded = base64.b64decode(settings.FIREBASE_PRIVATE_KEY).decode('utf-8')
+        # Decode the complete service account JSON from base64
+        service_account_json = base64.b64decode(settings.FIREBASE_PRIVATE_KEY).decode('utf-8')
+        cred_dict = json.loads(service_account_json)
 
-        cred_dict = {
-            "type": "service_account",
-            "project_id": settings.FIREBASE_PROJECT_ID,
-            "private_key": private_key_decoded,
-            "client_email": settings.FIREBASE_CLIENT_EMAIL,
-        }
+        # Validate that all required fields are present
+        required_fields = ['type', 'project_id', 'private_key', 'client_email', 'token_uri']
+        missing_fields = [field for field in required_fields if field not in cred_dict]
+        if missing_fields:
+            raise ValueError(f"Missing required fields in service account JSON: {missing_fields}")
 
         cred = credentials.Certificate(cred_dict)
         firebase_admin.initialize_app(cred)
         print("✅ Firebase Admin SDK initialized")
+    except json.JSONDecodeError as e:
+        print(f"❌ Firebase initialization failed: Invalid JSON in FIREBASE_PRIVATE_KEY: {e}")
+        raise
     except Exception as e:
         print(f"❌ Firebase initialization failed: {e}")
         raise
