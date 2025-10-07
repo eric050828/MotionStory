@@ -6,7 +6,7 @@ from typing import AsyncGenerator, Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from jose import jwt, JWTError
+import jwt
 
 from .database import get_database
 from .config import settings
@@ -49,7 +49,7 @@ async def get_current_user(
         user_id: str = payload.get("sub")
         if user_id is None:
             raise credentials_exception
-    except JWTError:
+    except jwt.InvalidTokenError:
         raise credentials_exception
 
     # Get user from database
@@ -117,5 +117,5 @@ async def get_optional_user(
             return None
 
         return UserInDB(**user_data)
-    except JWTError:
+    except jwt.InvalidTokenError:
         return None

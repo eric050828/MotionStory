@@ -12,7 +12,7 @@ pydantic-settings==2.1.0
 
 # Authentication
 firebase-admin==6.4.0
-python-jose[cryptography]==3.3.0
+PyJWT==2.8.0
 passlib[bcrypt]==1.7.4
 
 # Cloud Storage (Cloudflare R2)
