@@ -96,11 +96,7 @@ const GoogleOAuthScreen: React.FC = () => {
     <View style={styles.container}>
       <View style={styles.content}>
         <View style={styles.header}>
-          <Image
-            source={require('../../assets/google-logo.png')}
-            style={styles.googleLogo}
-            resizeMode="contain"
-          />
+          <Text style={styles.googleIcon}>G</Text>
           <Text style={styles.title}>使用 Google 登入</Text>
           <Text style={styles.subtitle}>快速安全地登入 MotionStory</Text>
         </View>
@@ -159,9 +155,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 48,
   },
-  googleLogo: {
-    width: 80,
-    height: 80,
+  googleIcon: {
+    fontSize: 64,
+    fontWeight: 'bold',
+    color: '#4285F4',
     marginBottom: 24,
   },
   title: {
