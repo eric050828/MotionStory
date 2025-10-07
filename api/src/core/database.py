@@ -120,3 +120,7 @@ class MongoDB:
 def get_db() -> AsyncIOMotorDatabase:
     """快速取得資料庫實例"""
     return MongoDB.get_database()
+
+
+# Alias for backward compatibility
+get_database = get_db
