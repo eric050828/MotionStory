@@ -1,0 +1,93 @@
+"""
+Pytest Configuration & Fixtures
+提供測試所需的共用 fixtures
+"""
+
+import pytest
+import asyncio
+from httpx import AsyncClient
+from motor.motor_asyncio import AsyncIOMotorClient
+from typing import AsyncGenerator
+
+from src.main import app
+from src.core.config import settings
+from src.core.database import MongoDB
+
+
+@pytest.fixture(scope="session")
+def event_loop():
+    """建立 event loop for async tests"""
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+    yield loop
+    loop.close()
+
+
+@pytest.fixture(scope="session")
+async def test_db():
+    """測試資料庫 fixture"""
+    # 使用測試專用資料庫
+    test_db_name = f"{settings.DB_NAME}_test"
+    client = AsyncIOMotorClient(settings.MONGODB_URI)
+    db = client[test_db_name]
+
+    yield db
+
+    # 清理測試資料庫
+    await client.drop_database(test_db_name)
+    client.close()
+
+
+@pytest.fixture(scope="function")
+async def client() -> AsyncGenerator[AsyncClient, None]:
+    """HTTP 測試客戶端"""
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        yield ac
+
+
+@pytest.fixture(scope="function")
+async def auth_headers(client: AsyncClient) -> dict:
+    """
+    認證 headers fixture
+    註冊測試使用者並返回 JWT token headers
+    """
+    # 註冊測試使用者
+    register_data = {
+        "email": "test@example.com",
+        "password": "SecurePass123",
+        "display_name": "Test User"
+    }
+
+    response = await client.post("/api/v1/auth/register", json=register_data)
+    assert response.status_code == 201
+
+    data = response.json()
+    token = data["access_token"]
+
+    return {
+        "Authorization": f"Bearer {token}"
+    }
+
+
+@pytest.fixture(scope="function")
+async def test_user_id(auth_headers: dict, client: AsyncClient) -> str:
+    """取得測試使用者 ID"""
+    response = await client.get("/api/v1/auth/me", headers=auth_headers)
+    assert response.status_code == 200
+
+    data = response.json()
+    return data["user"]["id"]
+
+
+@pytest.fixture(scope="function")
+async def sample_workout_data() -> dict:
+    """範例運動資料"""
+    return {
+        "workout_type": "running",
+        "start_time": "2025-01-15T08:30:00Z",
+        "duration_minutes": 30,
+        "distance_km": 5.0,
+        "pace_min_per_km": 6.0,
+        "avg_heart_rate": 145,
+        "calories": 300,
+        "notes": "Test workout"
+    }

@@ -1,0 +1,605 @@
+openapi: 3.0.3
+info:
+  title: MotionStory Achievements API
+  description: 成就系統與慶祝動畫 API
+  version: 1.0.0
+  contact:
+    name: MotionStory API Team
+
+servers:
+  - url: https://api.motionstory.com/api/v1
+    description: Production server
+  - url: http://localhost:8000/api/v1
+    description: Development server
+
+tags:
+  - name: Achievements
+    description: 成就與徽章管理
+  - name: Share Cards
+    description: 分享卡片生成
+
+security:
+  - BearerAuth: []
+
+paths:
+  /achievements:
+    get:
+      tags:
+        - Achievements
+      summary: 取得成就列表
+      description: |
+        取得使用者已解鎖的所有成就與徽章（FR-004）。
+        支援分頁與篩選。
+      operationId: listAchievements
+      parameters:
+        - name: limit
+          in: query
+          description: 每頁筆數（預設 20，最大 100）
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          example: 20
+        - name: cursor
+          in: query
+          description: 分頁游標
+          schema:
+            type: string
+          example: "eyJhY2hpZXZlZF9hdCI6IjIwMjUtMDEtMTVUMDg6MzA6MDBaIn0="
+        - name: achievement_type
+          in: query
+          description: 篩選成就類型
+          schema:
+            type: string
+            enum: [first_workout, streak, distance_milestone, personal_record, time_milestone]
+          example: streak
+        - name: celebration_level
+          in: query
+          description: 篩選慶祝等級
+          schema:
+            type: string
+            enum: [basic, fireworks, epic]
+          example: epic
+      responses:
+        '200':
+          description: 成功取得成就列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AchievementListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /achievements/{achievement_id}:
+    get:
+      tags:
+        - Achievements
+      summary: 取得單一成就詳情
+      description: 根據 ID 取得成就的詳細資訊與關聯運動記錄
+      operationId: getAchievement
+      parameters:
+        - $ref: '#/components/parameters/AchievementId'
+      responses:
+        '200':
+          description: 成功取得成就詳情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Achievement'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /achievements/check:
+    post:
+      tags:
+        - Achievements
+      summary: 檢查成就觸發
+      description: |
+        檢查特定運動記錄是否觸發新成就（FR-001~FR-003）。
+        由運動記錄建立 API 內部自動呼叫，也可手動觸發。
+      operationId: checkAchievements
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckAchievementsRequest'
+      responses:
+        '200':
+          description: 成就檢查完成
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckAchievementsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /achievements/stats:
+    get:
+      tags:
+        - Achievements
+      summary: 取得成就統計
+      description: |
+        取得使用者成就統計摘要。
+        包含總成就數、各等級成就數、完成度百分比。
+      operationId: getAchievementStats
+      responses:
+        '200':
+          description: 成功取得成就統計
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AchievementStats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /achievements/types:
+    get:
+      tags:
+        - Achievements
+      summary: 取得所有成就類型定義
+      description: |
+        取得系統定義的所有成就類型與解鎖條件。
+        用於顯示未解鎖成就的目標。
+      operationId: getAchievementTypes
+      responses:
+        '200':
+          description: 成功取得成就類型定義
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AchievementTypesResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /share-cards:
+    post:
+      tags:
+        - Share Cards
+      summary: 生成分享卡片
+      description: |
+        生成精美的成就分享卡片圖片（FR-005~FR-006）。
+        系統將卡片上傳至 Cloudflare R2 並回傳公開 URL。
+      operationId: createShareCard
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateShareCardRequest'
+      responses:
+        '201':
+          description: 分享卡片生成成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareCardResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: 成就不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /share-cards/{card_id}:
+    get:
+      tags:
+        - Share Cards
+      summary: 取得分享卡片資訊
+      description: 取得已生成的分享卡片資訊與 URL
+      operationId: getShareCard
+      parameters:
+        - name: card_id
+          in: path
+          required: true
+          description: 分享卡片唯一識別碼
+          schema:
+            type: string
+          example: "507f1f77bcf86cd799439013"
+      responses:
+        '200':
+          description: 成功取得分享卡片
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareCard'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    AchievementId:
+      name: achievement_id
+      in: path
+      required: true
+      description: 成就唯一識別碼（MongoDB ObjectId）
+      schema:
+        type: string
+        pattern: '^[a-f\d]{24}$'
+      example: "507f1f77bcf86cd799439012"
+
+  schemas:
+    Achievement:
+      type: object
+      required:
+        - id
+        - user_id
+        - achievement_type
+        - celebration_level
+        - achieved_at
+      properties:
+        id:
+          type: string
+          description: 成就唯一識別碼
+          example: "507f1f77bcf86cd799439012"
+        user_id:
+          type: string
+          description: 使用者 ID
+          example: "507f191e810c19729de860ea"
+        achievement_type:
+          type: string
+          description: 成就類型
+          enum:
+            - first_workout
+            - streak_3
+            - streak_7
+            - streak_30
+            - streak_60
+            - streak_100
+            - distance_5k
+            - distance_10k
+            - distance_half_marathon
+            - distance_marathon
+            - distance_100k_total
+            - distance_500k_total
+            - personal_record_distance
+            - personal_record_pace
+            - time_10_workouts
+            - time_50_workouts
+            - time_100_workouts
+          example: "streak_7"
+        celebration_level:
+          type: string
+          description: 慶祝等級（FR-003）
+          enum: [basic, fireworks, epic]
+          example: "fireworks"
+        workout_id:
+          type: string
+          description: 觸發成就的運動記錄 ID
+          example: "507f1f77bcf86cd799439011"
+        achieved_at:
+          type: string
+          format: date-time
+          description: 成就達成時間
+          example: "2025-01-15T08:35:00Z"
+        metadata:
+          type: object
+          description: 成就相關詳細資料
+          properties:
+            streak_days:
+              type: integer
+              description: 連續天數
+              example: 7
+            distance_km:
+              type: number
+              format: float
+              description: 距離里程碑（公里）
+              example: 21.0975
+            total_workouts:
+              type: integer
+              description: 總運動次數
+              example: 50
+            previous_record:
+              type: number
+              format: float
+              description: 先前紀錄（用於個人紀錄成就）
+              example: 5.5
+            new_record:
+              type: number
+              format: float
+              description: 新紀錄
+              example: 6.2
+          additionalProperties: true
+
+    AchievementListResponse:
+      type: object
+      required:
+        - achievements
+        - pagination
+      properties:
+        achievements:
+          type: array
+          items:
+            $ref: '#/components/schemas/Achievement'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    CheckAchievementsRequest:
+      type: object
+      required:
+        - workout_id
+      properties:
+        workout_id:
+          type: string
+          description: 運動記錄 ID
+          example: "507f1f77bcf86cd799439011"
+
+    CheckAchievementsResponse:
+      type: object
+      required:
+        - achievements_triggered
+        - total_triggered
+      properties:
+        achievements_triggered:
+          type: array
+          description: 觸發的成就列表
+          items:
+            $ref: '#/components/schemas/Achievement'
+        total_triggered:
+          type: integer
+          description: 觸發的成就總數
+          example: 2
+        message:
+          type: string
+          description: 觸發訊息
+          example: "恭喜！你達成了 2 個新成就"
+
+    AchievementStats:
+      type: object
+      required:
+        - total_achievements
+        - by_level
+        - completion_percentage
+      properties:
+        total_achievements:
+          type: integer
+          description: 總成就數
+          example: 15
+        by_level:
+          type: object
+          description: 各等級成就數
+          properties:
+            basic:
+              type: integer
+              example: 8
+            fireworks:
+              type: integer
+              example: 5
+            epic:
+              type: integer
+              example: 2
+        by_type:
+          type: object
+          description: 各類型成就數
+          additionalProperties:
+            type: integer
+          example:
+            first_workout: 1
+            streak: 3
+            distance_milestone: 5
+            personal_record: 4
+            time_milestone: 2
+        completion_percentage:
+          type: number
+          format: float
+          description: 完成度百分比（已解鎖 / 全部成就類型）
+          example: 62.5
+        latest_achievement:
+          $ref: '#/components/schemas/Achievement'
+
+    AchievementTypesResponse:
+      type: object
+      required:
+        - achievement_types
+      properties:
+        achievement_types:
+          type: array
+          description: 所有成就類型定義
+          items:
+            $ref: '#/components/schemas/AchievementTypeDefinition'
+
+    AchievementTypeDefinition:
+      type: object
+      required:
+        - type
+        - name
+        - description
+        - celebration_level
+        - unlock_criteria
+      properties:
+        type:
+          type: string
+          description: 成就類型識別碼
+          example: "streak_7"
+        name:
+          type: string
+          description: 成就名稱
+          example: "堅持者"
+        description:
+          type: string
+          description: 成就描述
+          example: "連續運動 7 天"
+        celebration_level:
+          type: string
+          enum: [basic, fireworks, epic]
+          example: "fireworks"
+        icon_url:
+          type: string
+          description: 成就徽章圖示 URL
+          example: "https://cdn.motionstory.com/badges/streak_7.png"
+        unlock_criteria:
+          type: object
+          description: 解鎖條件
+          properties:
+            metric:
+              type: string
+              enum: [streak_days, distance_km, workout_count, personal_best]
+              example: "streak_days"
+            threshold:
+              type: number
+              description: 門檻值
+              example: 7
+          required:
+            - metric
+            - threshold
+        is_unlocked:
+          type: boolean
+          description: 使用者是否已解鎖
+          example: true
+
+    CreateShareCardRequest:
+      type: object
+      required:
+        - achievement_id
+      properties:
+        achievement_id:
+          type: string
+          description: 要分享的成就 ID
+          example: "507f1f77bcf86cd799439012"
+        template:
+          type: string
+          description: 卡片樣板風格
+          enum: [default, minimal, celebration]
+          default: default
+          example: "celebration"
+        include_stats:
+          type: boolean
+          description: 是否包含統計資料（依隱私設定）
+          default: true
+          example: true
+
+    ShareCardResponse:
+      type: object
+      required:
+        - card
+      properties:
+        card:
+          $ref: '#/components/schemas/ShareCard'
+
+    ShareCard:
+      type: object
+      required:
+        - id
+        - achievement_id
+        - image_url
+        - created_at
+      properties:
+        id:
+          type: string
+          description: 分享卡片唯一識別碼
+          example: "507f1f77bcf86cd799439013"
+        achievement_id:
+          type: string
+          description: 關聯的成就 ID
+          example: "507f1f77bcf86cd799439012"
+        image_url:
+          type: string
+          format: uri
+          description: 卡片圖片公開 URL（Cloudflare R2）
+          example: "https://r2.motionstory.com/share-cards/507f191e810c19729de860ea/1736929800.png"
+        template:
+          type: string
+          enum: [default, minimal, celebration]
+          example: "celebration"
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-01-15T08:40:00Z"
+        expires_at:
+          type: string
+          format: date-time
+          description: 卡片過期時間（選填，用於臨時分享）
+          nullable: true
+          example: null
+
+    Pagination:
+      type: object
+      required:
+        - has_more
+      properties:
+        next_cursor:
+          type: string
+          nullable: true
+          example: "eyJhY2hpZXZlZF9hdCI6IjIwMjUtMDEtMTVUMDg6MzA6MDBaIn0="
+        has_more:
+          type: boolean
+          example: true
+        total_count:
+          type: integer
+          nullable: true
+          example: 15
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          example: "NOT_FOUND"
+        message:
+          type: string
+          example: "Achievement not found"
+        details:
+          type: object
+          additionalProperties: true
+          nullable: true
+
+  responses:
+    BadRequest:
+      description: 請求參數錯誤
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: 未授權或 token 無效
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: 資源不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    InternalServerError:
+      description: 伺服器內部錯誤
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

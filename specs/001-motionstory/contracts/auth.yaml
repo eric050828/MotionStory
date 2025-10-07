@@ -1,0 +1,530 @@
+openapi: 3.0.3
+info:
+  title: MotionStory Authentication API
+  description: 使用者認證與授權 API，支援 Email/Password 與 Google OAuth
+  version: 1.0.0
+  contact:
+    name: MotionStory API Team
+
+servers:
+  - url: https://api.motionstory.com/api/v1
+    description: Production server
+  - url: http://localhost:8000/api/v1
+    description: Development server
+
+tags:
+  - name: Authentication
+    description: 使用者認證相關操作
+
+paths:
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: 使用者註冊
+      description: |
+        使用 Email 與密碼註冊新帳號。
+        密碼需符合：至少 8 字元、包含大小寫字母與數字。
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            example:
+              email: user@example.com
+              password: SecurePass123
+              display_name: John Doe
+      responses:
+        '201':
+          description: 註冊成功，回傳使用者資訊與 JWT token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Email 已被註冊
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "CONFLICT"
+                message: "Email already registered"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: 使用者登入
+      description: 使用 Email 與密碼登入，取得 JWT token
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: user@example.com
+              password: SecurePass123
+      responses:
+        '200':
+          description: 登入成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: 認證失敗（Email 或密碼錯誤）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "UNAUTHORIZED"
+                message: "Invalid email or password"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/google:
+    post:
+      tags:
+        - Authentication
+      summary: Google OAuth 登入
+      description: |
+        使用 Google OAuth 登入。
+        Mobile App 先透過 Firebase SDK 取得 ID token，再傳送給 Backend 驗證。
+      operationId: loginWithGoogle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoogleAuthRequest'
+            example:
+              firebase_id_token: eyJhbGciOiJSUzI1NiIsImtpZCI6IjFlOWdkaz...
+      responses:
+        '200':
+          description: Google 登入成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: Firebase ID token 無效或已過期
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "UNAUTHORIZED"
+                message: "Invalid Firebase ID token"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: 刷新 JWT token
+      description: 使用 Firebase ID token 刷新 JWT token（7 天有效期）
+      operationId: refreshToken
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+            example:
+              firebase_id_token: eyJhbGciOiJSUzI1NiIsImtpZCI6IjFlOWdkaz...
+      responses:
+        '200':
+          description: Token 刷新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: 取得目前使用者資訊
+      description: 回傳已登入使用者的個人資料與隱私設定
+      operationId: getCurrentUser
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功取得使用者資訊
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/me:
+    put:
+      tags:
+        - Authentication
+      summary: 更新使用者資訊
+      description: 更新顯示名稱與隱私設定
+      operationId: updateUser
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+            example:
+              display_name: Jane Doe
+              privacy_settings:
+                share_location: false
+                share_detailed_stats: true
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/me/privacy:
+    put:
+      tags:
+        - Authentication
+      summary: 更新隱私設定
+      description: |
+        更新使用者隱私控制設定（FR-028）。
+        控制哪些資料可分享至社群、哪些資料保密。
+      operationId: updatePrivacySettings
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                share_location:
+                  type: boolean
+                  description: 分享卡片是否顯示地點
+                  example: false
+                share_detailed_stats:
+                  type: boolean
+                  description: 是否分享詳細統計數據
+                  example: true
+                share_achievements:
+                  type: boolean
+                  description: 是否分享成就至社群
+                  example: true
+                public_profile:
+                  type: boolean
+                  description: 公開個人檔案（未來功能）
+                  example: false
+      responses:
+        '200':
+          description: 隱私設定更新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Privacy settings updated successfully"
+                  privacy_settings:
+                    type: object
+                    properties:
+                      share_location:
+                        type: boolean
+                      share_detailed_stats:
+                        type: boolean
+                      share_achievements:
+                        type: boolean
+                      public_profile:
+                        type: boolean
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/delete:
+    delete:
+      tags:
+        - Authentication
+      summary: 刪除使用者帳號
+      description: |
+        永久刪除使用者帳號與所有相關資料。
+        資料保留 90 天後永久刪除（符合 GDPR）。
+      operationId: deleteUser
+      security:
+        - BearerAuth: []
+      responses:
+        '204':
+          description: 帳號刪除成功（無回應內容）
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token 格式：Authorization: Bearer <token>
+        Token 有效期 7 天，需定期透過 /auth/refresh 刷新
+
+  schemas:
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - password
+        - display_name
+      properties:
+        email:
+          type: string
+          format: email
+          description: 使用者 Email
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          minLength: 8
+          description: |
+            密碼需求：
+            - 至少 8 字元
+            - 包含大小寫字母
+            - 包含數字
+          example: SecurePass123
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 50
+          description: 顯示名稱
+          example: John Doe
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          example: SecurePass123
+
+    GoogleAuthRequest:
+      type: object
+      required:
+        - firebase_id_token
+      properties:
+        firebase_id_token:
+          type: string
+          description: Firebase Authentication ID token
+          example: eyJhbGciOiJSUzI1NiIsImtpZCI6IjFlOWdkaz...
+
+    RefreshTokenRequest:
+      type: object
+      required:
+        - firebase_id_token
+      properties:
+        firebase_id_token:
+          type: string
+          description: Firebase Authentication ID token
+          example: eyJhbGciOiJSUzI1NiIsImtpZCI6IjFlOWdkaz...
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 50
+          description: 更新顯示名稱
+          example: Jane Doe
+        privacy_settings:
+          $ref: '#/components/schemas/PrivacySettings'
+
+    AuthResponse:
+      type: object
+      required:
+        - user
+        - access_token
+        - token_type
+        - expires_in
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        access_token:
+          type: string
+          description: JWT access token
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        token_type:
+          type: string
+          enum: [Bearer]
+          example: Bearer
+        expires_in:
+          type: integer
+          description: Token 有效期限（秒）
+          example: 604800
+
+    TokenResponse:
+      type: object
+      required:
+        - access_token
+        - token_type
+        - expires_in
+      properties:
+        access_token:
+          type: string
+          description: 新的 JWT access token
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        token_type:
+          type: string
+          enum: [Bearer]
+          example: Bearer
+        expires_in:
+          type: integer
+          description: Token 有效期限（秒）
+          example: 604800
+
+    User:
+      type: object
+      required:
+        - id
+        - email
+        - display_name
+        - created_at
+      properties:
+        id:
+          type: string
+          description: 使用者唯一識別碼（MongoDB ObjectId）
+          example: 507f1f77bcf86cd799439011
+        firebase_uid:
+          type: string
+          description: Firebase 使用者 UID（僅 Google OAuth 登入時有值）
+          example: firebase-uid-123
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        display_name:
+          type: string
+          example: John Doe
+        privacy_settings:
+          $ref: '#/components/schemas/PrivacySettings'
+        created_at:
+          type: string
+          format: date-time
+          description: 帳號建立時間（ISO 8601）
+          example: "2025-01-15T08:30:00Z"
+
+    PrivacySettings:
+      type: object
+      properties:
+        share_location:
+          type: boolean
+          description: 是否分享運動地點資訊
+          default: false
+          example: false
+        share_detailed_stats:
+          type: boolean
+          description: 是否分享詳細統計資料
+          default: true
+          example: true
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: 錯誤代碼
+          example: "BAD_REQUEST"
+        message:
+          type: string
+          description: 錯誤訊息
+          example: "Invalid input parameters"
+        details:
+          type: object
+          description: 詳細錯誤資訊（選填）
+          additionalProperties: true
+          example:
+            field: "email"
+            issue: "Invalid email format"
+
+  responses:
+    BadRequest:
+      description: 請求參數錯誤
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "BAD_REQUEST"
+            message: "Invalid input parameters"
+            details:
+              field: "password"
+              issue: "Password must be at least 8 characters"
+
+    Unauthorized:
+      description: 未授權或 token 無效
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "UNAUTHORIZED"
+            message: "Invalid or expired token"
+
+    InternalServerError:
+      description: 伺服器內部錯誤
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "INTERNAL_SERVER_ERROR"
+            message: "An unexpected error occurred"

@@ -1,0 +1,893 @@
+openapi: 3.0.3
+info:
+  title: MotionStory Workouts API
+  description: 運動記錄 CRUD 與資料匯入匯出 API
+  version: 1.0.0
+  contact:
+    name: MotionStory API Team
+
+servers:
+  - url: https://api.motionstory.com/api/v1
+    description: Production server
+  - url: http://localhost:8000/api/v1
+    description: Development server
+
+tags:
+  - name: Workouts
+    description: 運動記錄管理
+  - name: Import/Export
+    description: 資料匯入匯出
+
+security:
+  - BearerAuth: []
+
+paths:
+  /workouts:
+    get:
+      tags:
+        - Workouts
+      summary: 取得運動記錄列表
+      description: |
+        分頁查詢使用者的運動記錄，支援篩選與排序。
+        使用 cursor-based pagination 優化效能。
+      operationId: listWorkouts
+      parameters:
+        - name: limit
+          in: query
+          description: 每頁筆數（預設 20，最大 100）
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          example: 20
+        - name: cursor
+          in: query
+          description: 分頁游標（上次查詢回傳的 next_cursor）
+          schema:
+            type: string
+          example: "eyJzdGFydF90aW1lIjoiMjAyNS0wMS0xNVQwODozMDowMFoifQ=="
+        - name: workout_type
+          in: query
+          description: 篩選運動類型
+          schema:
+            type: string
+            enum: [running, cycling, swimming, walking, hiking, gym, yoga, other]
+          example: running
+        - name: start_date
+          in: query
+          description: 起始日期（ISO 8601 格式）
+          schema:
+            type: string
+            format: date
+          example: "2025-01-01"
+        - name: end_date
+          in: query
+          description: 結束日期（ISO 8601 格式）
+          schema:
+            type: string
+            format: date
+          example: "2025-01-31"
+        - name: sort
+          in: query
+          description: 排序方式
+          schema:
+            type: string
+            enum: [start_time_desc, start_time_asc, distance_desc, duration_desc]
+            default: start_time_desc
+          example: start_time_desc
+      responses:
+        '200':
+          description: 成功取得運動記錄列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkoutListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags:
+        - Workouts
+      summary: 建立運動記錄
+      description: |
+        新增一筆運動記錄。
+        系統將自動檢查成就觸發（FR-001~FR-002）。
+      operationId: createWorkout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkoutRequest'
+      responses:
+        '201':
+          description: 運動記錄建立成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkoutResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /workouts/{workout_id}:
+    get:
+      tags:
+        - Workouts
+      summary: 取得單筆運動記錄
+      description: 根據 ID 取得運動記錄詳細資訊
+      operationId: getWorkout
+      parameters:
+        - $ref: '#/components/parameters/WorkoutId'
+      responses:
+        '200':
+          description: 成功取得運動記錄
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workout'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      tags:
+        - Workouts
+      summary: 更新運動記錄
+      description: 更新現有運動記錄的資訊
+      operationId: updateWorkout
+      parameters:
+        - $ref: '#/components/parameters/WorkoutId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWorkoutRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workout'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags:
+        - Workouts
+      summary: 刪除運動記錄
+      description: |
+        軟刪除運動記錄（標記為已刪除但不實際移除）。
+        保留 30 天復原期後才真正刪除（FR-024）。
+      operationId: deleteWorkout
+      parameters:
+        - $ref: '#/components/parameters/WorkoutId'
+      responses:
+        '204':
+          description: 刪除成功（無回應內容）
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /workouts/batch:
+    post:
+      tags:
+        - Workouts
+      summary: 批次建立運動記錄
+      description: |
+        批次新增多筆運動記錄（用於離線同步場景）。
+        系統將依序檢查每筆記錄的成就觸發。
+      operationId: batchCreateWorkouts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchCreateWorkoutsRequest'
+      responses:
+        '201':
+          description: 批次建立成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchCreateWorkoutsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /workouts/stats:
+    get:
+      tags:
+        - Workouts
+      summary: 取得運動統計摘要
+      description: |
+        取得使用者運動統計摘要（用於儀表板 Widget）。
+        包含總天數、總時長、總距離、平均配速等。
+      operationId: getWorkoutStats
+      parameters:
+        - name: time_range
+          in: query
+          description: 統計時間範圍
+          schema:
+            type: string
+            enum: [7d, 30d, 90d, 1y, all]
+            default: 30d
+          example: 30d
+        - name: workout_type
+          in: query
+          description: 篩選運動類型（選填）
+          schema:
+            type: string
+            enum: [running, cycling, swimming, walking, hiking, gym, yoga, other]
+          example: running
+      responses:
+        '200':
+          description: 成功取得統計摘要
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkoutStats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /workouts/export:
+    get:
+      tags:
+        - Import/Export
+      summary: 匯出運動資料
+      description: |
+        匯出完整運動資料為 CSV 格式（FR-025）。
+        支援篩選時間範圍與運動類型。
+      operationId: exportWorkouts
+      parameters:
+        - name: format
+          in: query
+          description: 匯出格式
+          schema:
+            type: string
+            enum: [csv]
+            default: csv
+          example: csv
+        - name: start_date
+          in: query
+          description: 起始日期（ISO 8601 格式）
+          schema:
+            type: string
+            format: date
+          example: "2025-01-01"
+        - name: end_date
+          in: query
+          description: 結束日期（ISO 8601 格式）
+          schema:
+            type: string
+            format: date
+          example: "2025-12-31"
+        - name: workout_type
+          in: query
+          description: 篩選運動類型（選填）
+          schema:
+            type: string
+            enum: [running, cycling, swimming, walking, hiking, gym, yoga, other]
+          example: running
+      responses:
+        '200':
+          description: 成功匯出資料
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+              example: |
+                date,workout_type,duration_minutes,distance_km,pace_min_per_km,avg_heart_rate,calories,notes
+                2025-01-15,running,30,5.2,5.77,145,320,Morning run
+                2025-01-14,cycling,45,15.0,N/A,130,450,Evening ride
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /workouts/import:
+    post:
+      tags:
+        - Import/Export
+      summary: 匯入運動資料
+      description: |
+        匯入 CSV 格式運動資料（FR-021）。
+        系統將驗證格式，格式不符時回傳錯誤訊息。
+      operationId: importWorkouts
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: CSV 檔案
+      responses:
+        '201':
+          description: 匯入成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportWorkoutsResponse'
+        '400':
+          description: CSV 格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "BAD_REQUEST"
+                message: "Invalid CSV format"
+                details:
+                  line: 3
+                  issue: "Missing required field: workout_type"
+                  sample_format: "date,workout_type,duration_minutes,distance_km,pace_min_per_km,avg_heart_rate,calories,notes"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /workouts/{workout_id}/restore:
+    post:
+      tags:
+        - Workouts
+      summary: 復原已刪除的運動記錄
+      description: |
+        復原軟刪除的運動記錄（FR-024）。
+        僅限刪除後 30 天內可復原，超過 30 天的記錄已永久刪除。
+      operationId: restoreWorkout
+      parameters:
+        - $ref: '#/components/parameters/WorkoutId'
+      responses:
+        '200':
+          description: 復原成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Workout restored successfully"
+                  workout:
+                    $ref: '#/components/schemas/Workout'
+        '400':
+          description: 記錄已超過復原期限
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "BAD_REQUEST"
+                message: "Workout已超過 30 天復原期限，無法復原"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /workouts/trash:
+    get:
+      tags:
+        - Workouts
+      summary: 取得垃圾桶中的運動記錄
+      description: |
+        取得已軟刪除但未超過 30 天的運動記錄列表（FR-024）。
+        使用者可查看待刪除記錄並選擇復原或永久刪除。
+      operationId: getTrashWorkouts
+      parameters:
+        - name: limit
+          in: query
+          description: 每頁筆數
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+        - name: cursor
+          in: query
+          description: 分頁游標
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功取得垃圾桶記錄
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  workouts:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: '#/components/schemas/Workout'
+                        - type: object
+                          properties:
+                            days_until_permanent_delete:
+                              type: integer
+                              example: 25
+                              description: 距離永久刪除的剩餘天數
+                  next_cursor:
+                    type: string
+                    nullable: true
+                  total_count:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    WorkoutId:
+      name: workout_id
+      in: path
+      required: true
+      description: 運動記錄唯一識別碼（MongoDB ObjectId）
+      schema:
+        type: string
+        pattern: '^[a-f\d]{24}$'
+      example: "507f1f77bcf86cd799439011"
+
+  schemas:
+    CreateWorkoutRequest:
+      type: object
+      required:
+        - workout_type
+        - start_time
+        - duration_minutes
+      properties:
+        workout_type:
+          type: string
+          enum: [running, cycling, swimming, walking, hiking, gym, yoga, other]
+          description: 運動類型
+          example: running
+        start_time:
+          type: string
+          format: date-time
+          description: 運動開始時間（ISO 8601）
+          example: "2025-01-15T08:30:00Z"
+        duration_minutes:
+          type: integer
+          minimum: 1
+          description: 運動時長（分鐘）
+          example: 30
+        distance_km:
+          type: number
+          format: float
+          minimum: 0
+          description: 運動距離（公里，選填）
+          example: 5.2
+        pace_min_per_km:
+          type: number
+          format: float
+          minimum: 0
+          description: 配速（分鐘/公里，選填）
+          example: 5.77
+        avg_heart_rate:
+          type: integer
+          minimum: 30
+          maximum: 250
+          description: 平均心率（選填）
+          example: 145
+        calories:
+          type: integer
+          minimum: 0
+          description: 卡路里消耗（選填）
+          example: 320
+        location:
+          $ref: '#/components/schemas/Location'
+        notes:
+          type: string
+          maxLength: 500
+          description: 運動備註（選填）
+          example: "晨跑，天氣良好"
+
+    UpdateWorkoutRequest:
+      type: object
+      properties:
+        workout_type:
+          type: string
+          enum: [running, cycling, swimming, walking, hiking, gym, yoga, other]
+          example: running
+        start_time:
+          type: string
+          format: date-time
+          example: "2025-01-15T08:30:00Z"
+        duration_minutes:
+          type: integer
+          minimum: 1
+          example: 30
+        distance_km:
+          type: number
+          format: float
+          minimum: 0
+          example: 5.2
+        pace_min_per_km:
+          type: number
+          format: float
+          minimum: 0
+          example: 5.77
+        avg_heart_rate:
+          type: integer
+          minimum: 30
+          maximum: 250
+          example: 145
+        calories:
+          type: integer
+          minimum: 0
+          example: 320
+        location:
+          $ref: '#/components/schemas/Location'
+        notes:
+          type: string
+          maxLength: 500
+          example: "晨跑，天氣良好"
+
+    Workout:
+      type: object
+      required:
+        - id
+        - user_id
+        - workout_type
+        - start_time
+        - duration_minutes
+        - created_at
+      properties:
+        id:
+          type: string
+          description: 運動記錄唯一識別碼
+          example: "507f1f77bcf86cd799439011"
+        user_id:
+          type: string
+          description: 使用者 ID
+          example: "507f191e810c19729de860ea"
+        workout_type:
+          type: string
+          enum: [running, cycling, swimming, walking, hiking, gym, yoga, other]
+          example: running
+        start_time:
+          type: string
+          format: date-time
+          example: "2025-01-15T08:30:00Z"
+        duration_minutes:
+          type: integer
+          example: 30
+        distance_km:
+          type: number
+          format: float
+          nullable: true
+          example: 5.2
+        pace_min_per_km:
+          type: number
+          format: float
+          nullable: true
+          example: 5.77
+        avg_heart_rate:
+          type: integer
+          nullable: true
+          example: 145
+        calories:
+          type: integer
+          nullable: true
+          example: 320
+        location:
+          $ref: '#/components/schemas/Location'
+        notes:
+          type: string
+          nullable: true
+          example: "晨跑，天氣良好"
+        is_deleted:
+          type: boolean
+          description: 軟刪除標記
+          example: false
+        sync_status:
+          type: string
+          enum: [synced, pending, conflict]
+          description: 同步狀態（離線同步用）
+          example: synced
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-01-15T08:35:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-01-15T08:35:00Z"
+
+    Location:
+      type: object
+      description: GeoJSON Point 格式（用於未來地圖功能）
+      properties:
+        type:
+          type: string
+          enum: [Point]
+          example: Point
+        coordinates:
+          type: array
+          description: [經度, 緯度]
+          items:
+            type: number
+            format: float
+          minItems: 2
+          maxItems: 2
+          example: [121.5654, 25.0330]
+
+    WorkoutListResponse:
+      type: object
+      required:
+        - workouts
+        - pagination
+      properties:
+        workouts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Workout'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    WorkoutResponse:
+      type: object
+      required:
+        - workout
+        - achievements_triggered
+      properties:
+        workout:
+          $ref: '#/components/schemas/Workout'
+        achievements_triggered:
+          type: array
+          description: 觸發的成就列表（FR-002）
+          items:
+            $ref: '#/components/schemas/AchievementSummary'
+          example:
+            - id: "507f1f77bcf86cd799439012"
+              achievement_type: "first_workout"
+              celebration_level: "basic"
+
+    BatchCreateWorkoutsRequest:
+      type: object
+      required:
+        - workouts
+      properties:
+        workouts:
+          type: array
+          description: 批次運動記錄列表
+          items:
+            $ref: '#/components/schemas/CreateWorkoutRequest'
+          minItems: 1
+          maxItems: 100
+
+    BatchCreateWorkoutsResponse:
+      type: object
+      required:
+        - created_count
+        - failed_count
+        - workouts
+      properties:
+        created_count:
+          type: integer
+          description: 成功建立的記錄數
+          example: 8
+        failed_count:
+          type: integer
+          description: 失敗的記錄數
+          example: 2
+        workouts:
+          type: array
+          description: 建立結果列表
+          items:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: true
+              workout:
+                $ref: '#/components/schemas/Workout'
+              error:
+                type: string
+                nullable: true
+                example: null
+
+    WorkoutStats:
+      type: object
+      required:
+        - total_workouts
+        - total_duration_minutes
+        - total_distance_km
+      properties:
+        total_workouts:
+          type: integer
+          description: 總運動次數
+          example: 45
+        total_duration_minutes:
+          type: integer
+          description: 總運動時長（分鐘）
+          example: 1350
+        total_distance_km:
+          type: number
+          format: float
+          description: 總運動距離（公里）
+          example: 234.5
+        avg_pace_min_per_km:
+          type: number
+          format: float
+          nullable: true
+          description: 平均配速（分鐘/公里）
+          example: 5.76
+        avg_heart_rate:
+          type: integer
+          nullable: true
+          description: 平均心率
+          example: 142
+        total_calories:
+          type: integer
+          description: 總卡路里消耗
+          example: 14400
+        streak_days:
+          type: integer
+          description: 當前連續運動天數
+          example: 7
+        workout_by_type:
+          type: object
+          description: 各類運動統計
+          additionalProperties:
+            type: integer
+          example:
+            running: 30
+            cycling: 10
+            swimming: 5
+
+    ImportWorkoutsResponse:
+      type: object
+      required:
+        - imported_count
+        - failed_count
+      properties:
+        imported_count:
+          type: integer
+          description: 成功匯入的記錄數
+          example: 48
+        failed_count:
+          type: integer
+          description: 失敗的記錄數
+          example: 2
+        errors:
+          type: array
+          description: 失敗記錄的錯誤詳情
+          items:
+            type: object
+            properties:
+              line:
+                type: integer
+                example: 5
+              error:
+                type: string
+                example: "Invalid workout_type value"
+
+    AchievementSummary:
+      type: object
+      required:
+        - id
+        - achievement_type
+        - celebration_level
+      properties:
+        id:
+          type: string
+          example: "507f1f77bcf86cd799439012"
+        achievement_type:
+          type: string
+          example: "first_workout"
+        celebration_level:
+          type: string
+          enum: [basic, fireworks, epic]
+          example: "basic"
+
+    Pagination:
+      type: object
+      required:
+        - has_more
+      properties:
+        next_cursor:
+          type: string
+          nullable: true
+          description: 下一頁游標（無下一頁時為 null）
+          example: "eyJzdGFydF90aW1lIjoiMjAyNS0wMS0xNVQwODozMDowMFoifQ=="
+        has_more:
+          type: boolean
+          description: 是否有下一頁
+          example: true
+        total_count:
+          type: integer
+          description: 總記錄數（選填，可能影響效能）
+          nullable: true
+          example: 245
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          example: "BAD_REQUEST"
+        message:
+          type: string
+          example: "Invalid input parameters"
+        details:
+          type: object
+          additionalProperties: true
+          nullable: true
+
+  responses:
+    BadRequest:
+      description: 請求參數錯誤
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: 未授權或 token 無效
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: 資源不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "NOT_FOUND"
+            message: "Workout not found"
+
+    InternalServerError:
+      description: 伺服器內部錯誤
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

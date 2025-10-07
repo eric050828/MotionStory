@@ -1,0 +1,756 @@
+openapi: 3.0.3
+info:
+  title: MotionStory Dashboards API
+  description: 客製化儀表板與 Widget 管理 API
+  version: 1.0.0
+  contact:
+    name: MotionStory API Team
+
+servers:
+  - url: https://api.motionstory.com/api/v1
+    description: Production server
+  - url: http://localhost:8000/api/v1
+    description: Development server
+
+tags:
+  - name: Dashboards
+    description: 儀表板管理
+  - name: Widgets
+    description: Widget 配置與資料
+
+security:
+  - BearerAuth: []
+
+paths:
+  /dashboards:
+    get:
+      tags:
+        - Dashboards
+      summary: 取得所有儀表板
+      description: |
+        取得使用者建立的所有儀表板（FR-007, FR-011）。
+        回傳儀表板列表與 Widget 配置。
+      operationId: listDashboards
+      responses:
+        '200':
+          description: 成功取得儀表板列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags:
+        - Dashboards
+      summary: 建立新儀表板
+      description: |
+        建立新的客製化儀表板（FR-007）。
+        初始為空白儀表板，使用者可後續新增 Widget。
+      operationId: createDashboard
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDashboardRequest'
+      responses:
+        '201':
+          description: 儀表板建立成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dashboard'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /dashboards/{dashboard_id}:
+    get:
+      tags:
+        - Dashboards
+      summary: 取得單一儀表板
+      description: 根據 ID 取得儀表板詳細資訊與 Widget 配置
+      operationId: getDashboard
+      parameters:
+        - $ref: '#/components/parameters/DashboardId'
+      responses:
+        '200':
+          description: 成功取得儀表板
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dashboard'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      tags:
+        - Dashboards
+      summary: 更新儀表板配置
+      description: |
+        更新儀表板名稱或 Widget 配置（FR-008, FR-010）。
+        Widget 配置變更即時儲存並跨裝置同步。
+      operationId: updateDashboard
+      parameters:
+        - $ref: '#/components/parameters/DashboardId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDashboardRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dashboard'
+        '400':
+          description: 請求參數錯誤或超過 Widget 數量限制
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "BAD_REQUEST"
+                message: "Widget limit exceeded"
+                details:
+                  max_widgets: 20
+                  current_widgets: 21
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags:
+        - Dashboards
+      summary: 刪除儀表板
+      description: 刪除指定的儀表板（使用者至少需保留一個儀表板）
+      operationId: deleteDashboard
+      parameters:
+        - $ref: '#/components/parameters/DashboardId'
+      responses:
+        '204':
+          description: 刪除成功（無回應內容）
+        '400':
+          description: 無法刪除最後一個儀表板
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "BAD_REQUEST"
+                message: "Cannot delete the last dashboard"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /dashboards/{dashboard_id}/widgets:
+    post:
+      tags:
+        - Widgets
+      summary: 新增 Widget 至儀表板
+      description: |
+        新增新的 Widget 至儀表板（FR-008）。
+        檢查 Widget 數量限制（建議 12 個，硬限制 20 個）。
+      operationId: addWidget
+      parameters:
+        - $ref: '#/components/parameters/DashboardId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddWidgetRequest'
+      responses:
+        '201':
+          description: Widget 新增成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dashboard'
+        '400':
+          description: Widget 數量超過限制
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "BAD_REQUEST"
+                message: "Widget limit exceeded (max: 20)"
+                details:
+                  current_widgets: 20
+                  suggestion: "建議建立多個儀表板以優化效能"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /dashboards/{dashboard_id}/widgets/{widget_id}:
+    put:
+      tags:
+        - Widgets
+      summary: 更新 Widget 配置
+      description: |
+        更新 Widget 的位置、大小或配置（FR-008, FR-033）。
+        支援拖拉操作的即時更新。
+      operationId: updateWidget
+      parameters:
+        - $ref: '#/components/parameters/DashboardId'
+        - $ref: '#/components/parameters/WidgetId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWidgetRequest'
+      responses:
+        '200':
+          description: Widget 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dashboard'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags:
+        - Widgets
+      summary: 移除 Widget
+      description: 從儀表板移除指定的 Widget（FR-008）
+      operationId: removeWidget
+      parameters:
+        - $ref: '#/components/parameters/DashboardId'
+        - $ref: '#/components/parameters/WidgetId'
+      responses:
+        '204':
+          description: Widget 移除成功（無回應內容）
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /widgets/types:
+    get:
+      tags:
+        - Widgets
+      summary: 取得所有 Widget 類型定義
+      description: |
+        取得系統支援的所有 Widget 類型與配置選項（FR-009）。
+        用於 Widget 選擇器 UI。
+      operationId: getWidgetTypes
+      responses:
+        '200':
+          description: 成功取得 Widget 類型列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WidgetTypesResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /widgets/{widget_id}/data:
+    get:
+      tags:
+        - Widgets
+      summary: 取得 Widget 資料
+      description: |
+        取得 Widget 顯示的資料（用於 Widget 刷新）。
+        資料來源為系統自有資料庫（FR-012）。
+      operationId: getWidgetData
+      parameters:
+        - name: widget_id
+          in: path
+          required: true
+          description: Widget 唯一識別碼
+          schema:
+            type: string
+          example: "widget-001"
+        - name: time_range
+          in: query
+          description: 資料時間範圍
+          schema:
+            type: string
+            enum: [7d, 30d, 90d, 1y, all]
+            default: 30d
+          example: 30d
+      responses:
+        '200':
+          description: 成功取得 Widget 資料
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WidgetDataResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    DashboardId:
+      name: dashboard_id
+      in: path
+      required: true
+      description: 儀表板唯一識別碼（MongoDB ObjectId）
+      schema:
+        type: string
+        pattern: '^[a-f\d]{24}$'
+      example: "507f1f77bcf86cd799439014"
+
+    WidgetId:
+      name: widget_id
+      in: path
+      required: true
+      description: Widget 唯一識別碼
+      schema:
+        type: string
+      example: "widget-001"
+
+  schemas:
+    Dashboard:
+      type: object
+      required:
+        - id
+        - user_id
+        - name
+        - widgets
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          description: 儀表板唯一識別碼
+          example: "507f1f77bcf86cd799439014"
+        user_id:
+          type: string
+          description: 使用者 ID
+          example: "507f191e810c19729de860ea"
+        name:
+          type: string
+          description: 儀表板名稱
+          example: "訓練儀表板"
+        widgets:
+          type: array
+          description: Widget 配置列表
+          items:
+            $ref: '#/components/schemas/Widget'
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-01-10T10:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-01-15T08:45:00Z"
+
+    Widget:
+      type: object
+      required:
+        - id
+        - type
+        - position
+        - size
+        - config
+      properties:
+        id:
+          type: string
+          description: Widget 唯一識別碼（儀表板內唯一）
+          example: "widget-001"
+        type:
+          type: string
+          description: Widget 類型（FR-009）
+          enum:
+            - streak_counter
+            - total_duration
+            - total_distance
+            - calories_burned
+            - trend_chart
+            - heatmap
+            - pace_analysis
+            - heart_rate_chart
+            - hrv_trend
+            - training_load
+            - recovery_index
+            - sleep_quality
+          example: "streak_counter"
+        position:
+          type: object
+          description: Widget 位置（格線座標）
+          properties:
+            x:
+              type: integer
+              minimum: 0
+              example: 0
+            y:
+              type: integer
+              minimum: 0
+              example: 0
+          required:
+            - x
+            - y
+        size:
+          type: object
+          description: Widget 大小（格線單位）
+          properties:
+            width:
+              type: integer
+              minimum: 1
+              maximum: 12
+              example: 6
+            height:
+              type: integer
+              minimum: 1
+              maximum: 8
+              example: 4
+          required:
+            - width
+            - height
+        config:
+          type: object
+          description: Widget 特定配置
+          properties:
+            time_range:
+              type: string
+              enum: [7d, 30d, 90d, 1y, all]
+              default: 30d
+              example: 30d
+            metric:
+              type: string
+              description: 顯示的指標（依 Widget 類型而定）
+              enum: [distance, duration, pace, heart_rate, calories]
+              example: distance
+            workout_type:
+              type: string
+              description: 篩選運動類型（選填）
+              enum: [running, cycling, swimming, walking, hiking, gym, yoga, other]
+              nullable: true
+              example: running
+            chart_type:
+              type: string
+              description: 圖表類型（用於圖表類 Widget）
+              enum: [line, bar, area]
+              example: line
+          additionalProperties: true
+
+    CreateDashboardRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+          description: 儀表板名稱
+          example: "恢復儀表板"
+
+    UpdateDashboardRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+          description: 更新儀表板名稱
+          example: "訓練追蹤儀表板"
+        widgets:
+          type: array
+          description: 完整 Widget 配置列表（覆寫現有配置）
+          items:
+            $ref: '#/components/schemas/Widget'
+
+    AddWidgetRequest:
+      type: object
+      required:
+        - type
+        - position
+        - size
+      properties:
+        type:
+          type: string
+          enum:
+            - streak_counter
+            - total_duration
+            - total_distance
+            - calories_burned
+            - trend_chart
+            - heatmap
+            - pace_analysis
+            - heart_rate_chart
+            - hrv_trend
+            - training_load
+            - recovery_index
+            - sleep_quality
+          example: "pace_analysis"
+        position:
+          type: object
+          properties:
+            x:
+              type: integer
+              minimum: 0
+              example: 0
+            y:
+              type: integer
+              minimum: 0
+              example: 4
+          required:
+            - x
+            - y
+        size:
+          type: object
+          properties:
+            width:
+              type: integer
+              minimum: 1
+              maximum: 12
+              example: 12
+            height:
+              type: integer
+              minimum: 1
+              maximum: 8
+              example: 6
+          required:
+            - width
+            - height
+        config:
+          type: object
+          description: Widget 配置（選填）
+          properties:
+            time_range:
+              type: string
+              enum: [7d, 30d, 90d, 1y, all]
+              default: 30d
+            metric:
+              type: string
+              enum: [distance, duration, pace, heart_rate, calories]
+            workout_type:
+              type: string
+              enum: [running, cycling, swimming, walking, hiking, gym, yoga, other]
+              nullable: true
+            chart_type:
+              type: string
+              enum: [line, bar, area]
+          additionalProperties: true
+
+    UpdateWidgetRequest:
+      type: object
+      properties:
+        position:
+          type: object
+          description: 更新 Widget 位置
+          properties:
+            x:
+              type: integer
+              minimum: 0
+            y:
+              type: integer
+              minimum: 0
+        size:
+          type: object
+          description: 更新 Widget 大小
+          properties:
+            width:
+              type: integer
+              minimum: 1
+              maximum: 12
+            height:
+              type: integer
+              minimum: 1
+              maximum: 8
+        config:
+          type: object
+          description: 更新 Widget 配置
+          additionalProperties: true
+
+    DashboardListResponse:
+      type: object
+      required:
+        - dashboards
+        - total_count
+      properties:
+        dashboards:
+          type: array
+          items:
+            $ref: '#/components/schemas/Dashboard'
+        total_count:
+          type: integer
+          description: 儀表板總數
+          example: 3
+
+    WidgetTypesResponse:
+      type: object
+      required:
+        - widget_types
+      properties:
+        widget_types:
+          type: array
+          description: 所有 Widget 類型定義
+          items:
+            $ref: '#/components/schemas/WidgetTypeDefinition'
+
+    WidgetTypeDefinition:
+      type: object
+      required:
+        - type
+        - name
+        - description
+        - category
+        - default_size
+      properties:
+        type:
+          type: string
+          description: Widget 類型識別碼
+          example: "streak_counter"
+        name:
+          type: string
+          description: Widget 名稱
+          example: "連續天數"
+        description:
+          type: string
+          description: Widget 描述
+          example: "顯示當前連續運動天數"
+        category:
+          type: string
+          description: Widget 分類
+          enum: [basic_stats, charts, advanced_stats]
+          example: "basic_stats"
+        icon_url:
+          type: string
+          description: Widget 圖示 URL
+          example: "https://cdn.motionstory.com/widgets/streak_counter.png"
+        default_size:
+          type: object
+          description: 預設大小
+          properties:
+            width:
+              type: integer
+              example: 6
+            height:
+              type: integer
+              example: 4
+        configurable_options:
+          type: array
+          description: 可配置的選項
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+                example: "time_range"
+              type:
+                type: string
+                enum: [select, toggle, number]
+                example: "select"
+              options:
+                type: array
+                items:
+                  type: string
+                example: ["7d", "30d", "90d", "1y", "all"]
+
+    WidgetDataResponse:
+      type: object
+      required:
+        - widget_id
+        - data
+        - last_updated
+      properties:
+        widget_id:
+          type: string
+          example: "widget-001"
+        data:
+          type: object
+          description: Widget 資料（依類型而定）
+          additionalProperties: true
+          example:
+            value: 7
+            label: "天"
+            trend: "up"
+        last_updated:
+          type: string
+          format: date-time
+          description: 資料最後更新時間
+          example: "2025-01-15T08:50:00Z"
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          example: "BAD_REQUEST"
+        message:
+          type: string
+          example: "Invalid input parameters"
+        details:
+          type: object
+          additionalProperties: true
+          nullable: true
+
+  responses:
+    BadRequest:
+      description: 請求參數錯誤
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: 未授權或 token 無效
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: 資源不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    InternalServerError:
+      description: 伺服器內部錯誤
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

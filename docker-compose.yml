@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  # ===================================
+  # MongoDB for Local Development
+  # ===================================
+  mongodb:
+    image: mongo:7.0
+    container_name: motionstory-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: motionstory
+    volumes:
+      - mongodb_data:/data/db
+      - ./scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - motionstory-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/motionstory --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===================================
+  # FastAPI Backend
+  # ===================================
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: motionstory-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017
+      - DB_NAME=motionstory
+      - ENVIRONMENT=development
+      - DEBUG=True
+      - JWT_SECRET_KEY=dev-secret-key-change-in-production
+      - JWT_ALGORITHM=HS256
+      - JWT_EXPIRATION_DAYS=7
+    volumes:
+      - ./api/src:/app/src
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - motionstory-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read()"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  # ===================================
+  # MongoDB Express (Admin UI)
+  # ===================================
+  mongo-express:
+    image: mongo-express:1.0-20
+    container_name: motionstory-mongo-express
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_URL: mongodb://mongodb:27017/
+      ME_CONFIG_BASICAUTH: false
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - motionstory-network
+
+networks:
+  motionstory-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+    driver: local

@@ -1,0 +1,753 @@
+openapi: 3.0.3
+info:
+  title: MotionStory Timeline & Annual Review API
+  description: 運動時間軸與年度回顧 API
+  version: 1.0.0
+  contact:
+    name: MotionStory API Team
+
+servers:
+  - url: https://api.motionstory.com/api/v1
+    description: Production server
+  - url: http://localhost:8000/api/v1
+    description: Development server
+
+tags:
+  - name: Timeline
+    description: 運動時間軸與里程碑
+  - name: Annual Review
+    description: 年度回顧生成與匯出
+
+security:
+  - BearerAuth: []
+
+paths:
+  /timeline:
+    get:
+      tags:
+        - Timeline
+      summary: 取得運動時間軸
+      description: |
+        取得使用者完整運動歷程時間軸（FR-014）。
+        支援虛擬滾動分頁載入，避免卡頓（FR-034）。
+      operationId: getTimeline
+      parameters:
+        - name: limit
+          in: query
+          description: 每頁筆數（預設 20，最大 50）
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+          example: 20
+        - name: cursor
+          in: query
+          description: 分頁游標（上次查詢回傳的 next_cursor）
+          schema:
+            type: string
+          example: "eyJzdGFydF90aW1lIjoiMjAyNS0wMS0xNVQwODozMDowMFoifQ=="
+        - name: workout_type
+          in: query
+          description: 篩選運動類型（FR-017）
+          schema:
+            type: string
+            enum: [running, cycling, swimming, walking, hiking, gym, yoga, other]
+          example: running
+        - name: start_date
+          in: query
+          description: 起始日期（ISO 8601 格式）
+          schema:
+            type: string
+            format: date
+          example: "2024-01-01"
+        - name: end_date
+          in: query
+          description: 結束日期（ISO 8601 格式）
+          schema:
+            type: string
+            format: date
+          example: "2024-12-31"
+        - name: include_milestones
+          in: query
+          description: 是否包含里程碑標記
+          schema:
+            type: boolean
+            default: true
+          example: true
+      responses:
+        '200':
+          description: 成功取得時間軸
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimelineResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /timeline/milestones:
+    get:
+      tags:
+        - Timeline
+      summary: 取得里程碑列表
+      description: |
+        取得使用者所有重要里程碑（FR-015）。
+        包含首次 5K/10K/半馬/全馬、連續天數、個人紀錄等。
+      operationId: getMilestones
+      parameters:
+        - name: limit
+          in: query
+          description: 每頁筆數（預設 20，最大 100）
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          example: 20
+        - name: cursor
+          in: query
+          description: 分頁游標
+          schema:
+            type: string
+          example: "eyJhY2hpZXZlZF9hdCI6IjIwMjUtMDEtMTVUMDg6MzA6MDBaIn0="
+        - name: milestone_type
+          in: query
+          description: 篩選里程碑類型
+          schema:
+            type: string
+            enum: [first_5k, first_10k, first_half_marathon, first_marathon, streak_30, streak_60, streak_100, personal_record]
+          example: first_10k
+      responses:
+        '200':
+          description: 成功取得里程碑列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MilestoneListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /timeline/milestones/{milestone_id}:
+    get:
+      tags:
+        - Timeline
+      summary: 取得里程碑詳情
+      description: 取得單一里程碑的詳細資訊與關聯運動記錄（FR-016）
+      operationId: getMilestone
+      parameters:
+        - $ref: '#/components/parameters/MilestoneId'
+      responses:
+        '200':
+          description: 成功取得里程碑詳情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Milestone'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /annual-review:
+    post:
+      tags:
+        - Annual Review
+      summary: 生成年度回顧
+      description: |
+        生成使用者年度運動回顧（FR-018~FR-019）。
+        互動式網頁版 < 3 秒生成，圖片匯出 < 5 秒（FR-035）。
+      operationId: createAnnualReview
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAnnualReviewRequest'
+      responses:
+        '201':
+          description: 年度回顧生成成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnnualReviewResponse'
+        '400':
+          description: 請求參數錯誤或資料不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "BAD_REQUEST"
+                message: "Insufficient data for annual review"
+                details:
+                  min_workouts_required: 5
+                  current_workouts: 2
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /annual-review/{review_id}:
+    get:
+      tags:
+        - Annual Review
+      summary: 取得年度回顧
+      description: 取得已生成的年度回顧資料
+      operationId: getAnnualReview
+      parameters:
+        - $ref: '#/components/parameters/ReviewId'
+      responses:
+        '200':
+          description: 成功取得年度回顧
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnnualReview'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /annual-review/{review_id}/export:
+    get:
+      tags:
+        - Annual Review
+      summary: 匯出年度回顧
+      description: |
+        匯出年度回顧為圖片或 PDF 格式（FR-019, FR-025）。
+        圖片匯出 < 5 秒生成多張圖片。
+      operationId: exportAnnualReview
+      parameters:
+        - $ref: '#/components/parameters/ReviewId'
+        - name: format
+          in: query
+          required: true
+          description: 匯出格式
+          schema:
+            type: string
+            enum: [pdf, images]
+          example: images
+      responses:
+        '200':
+          description: 匯出成功
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportImagesResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /annual-review/list:
+    get:
+      tags:
+        - Annual Review
+      summary: 取得歷年回顧列表
+      description: 取得使用者所有年度回顧記錄
+      operationId: listAnnualReviews
+      responses:
+        '200':
+          description: 成功取得回顧列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnnualReviewListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    MilestoneId:
+      name: milestone_id
+      in: path
+      required: true
+      description: 里程碑唯一識別碼（MongoDB ObjectId）
+      schema:
+        type: string
+        pattern: '^[a-f\d]{24}$'
+      example: "507f1f77bcf86cd799439015"
+
+    ReviewId:
+      name: review_id
+      in: path
+      required: true
+      description: 年度回顧唯一識別碼（MongoDB ObjectId）
+      schema:
+        type: string
+        pattern: '^[a-f\d]{24}$'
+      example: "507f1f77bcf86cd799439016"
+
+  schemas:
+    TimelineEntry:
+      type: object
+      required:
+        - id
+        - type
+        - date
+      properties:
+        id:
+          type: string
+          description: 時間軸項目唯一識別碼
+          example: "507f1f77bcf86cd799439011"
+        type:
+          type: string
+          description: 項目類型
+          enum: [workout, milestone]
+          example: "workout"
+        date:
+          type: string
+          format: date-time
+          description: 項目日期
+          example: "2025-01-15T08:30:00Z"
+        workout:
+          $ref: '#/components/schemas/WorkoutSummary'
+        milestone:
+          $ref: '#/components/schemas/MilestoneSummary'
+
+    WorkoutSummary:
+      type: object
+      description: 運動記錄摘要（用於時間軸顯示）
+      properties:
+        id:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        workout_type:
+          type: string
+          example: "running"
+        duration_minutes:
+          type: integer
+          example: 30
+        distance_km:
+          type: number
+          format: float
+          nullable: true
+          example: 5.2
+        notes:
+          type: string
+          nullable: true
+          example: "晨跑"
+
+    MilestoneSummary:
+      type: object
+      description: 里程碑摘要（用於時間軸高亮標記）
+      properties:
+        id:
+          type: string
+          example: "507f1f77bcf86cd799439015"
+        milestone_type:
+          type: string
+          example: "first_10k"
+        name:
+          type: string
+          example: "首次 10K"
+        description:
+          type: string
+          example: "完成人生第一個 10 公里跑步"
+
+    Milestone:
+      type: object
+      required:
+        - id
+        - user_id
+        - milestone_type
+        - achieved_at
+      properties:
+        id:
+          type: string
+          description: 里程碑唯一識別碼
+          example: "507f1f77bcf86cd799439015"
+        user_id:
+          type: string
+          description: 使用者 ID
+          example: "507f191e810c19729de860ea"
+        milestone_type:
+          type: string
+          description: 里程碑類型（FR-015）
+          enum:
+            - first_5k
+            - first_10k
+            - first_half_marathon
+            - first_marathon
+            - streak_30
+            - streak_60
+            - streak_100
+            - personal_record_distance
+            - personal_record_pace
+          example: "first_10k"
+        name:
+          type: string
+          description: 里程碑名稱
+          example: "首次 10K"
+        description:
+          type: string
+          description: 里程碑描述
+          example: "完成人生第一個 10 公里跑步"
+        workout_id:
+          type: string
+          description: 達成里程碑的運動記錄 ID
+          example: "507f1f77bcf86cd799439011"
+        achieved_at:
+          type: string
+          format: date-time
+          description: 達成時間
+          example: "2025-01-15T08:30:00Z"
+        metadata:
+          type: object
+          description: 里程碑相關詳細資料
+          properties:
+            distance_km:
+              type: number
+              format: float
+              example: 10.0
+            duration_minutes:
+              type: integer
+              example: 58
+            pace_min_per_km:
+              type: number
+              format: float
+              example: 5.8
+          additionalProperties: true
+
+    TimelineResponse:
+      type: object
+      required:
+        - entries
+        - pagination
+      properties:
+        entries:
+          type: array
+          description: 時間軸項目列表（運動記錄與里程碑混合）
+          items:
+            $ref: '#/components/schemas/TimelineEntry'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    MilestoneListResponse:
+      type: object
+      required:
+        - milestones
+        - pagination
+      properties:
+        milestones:
+          type: array
+          items:
+            $ref: '#/components/schemas/Milestone'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    CreateAnnualReviewRequest:
+      type: object
+      required:
+        - year
+      properties:
+        year:
+          type: integer
+          description: 年度（YYYY 格式）
+          minimum: 2020
+          maximum: 2100
+          example: 2024
+        include_video:
+          type: boolean
+          description: 是否生成影片版（未來功能，MVP 不支援）
+          default: false
+          example: false
+
+    AnnualReview:
+      type: object
+      required:
+        - id
+        - user_id
+        - year
+        - stats
+        - milestones
+        - trends
+        - created_at
+      properties:
+        id:
+          type: string
+          description: 年度回顧唯一識別碼
+          example: "507f1f77bcf86cd799439016"
+        user_id:
+          type: string
+          description: 使用者 ID
+          example: "507f191e810c19729de860ea"
+        year:
+          type: integer
+          description: 年度
+          example: 2024
+        usage_months:
+          type: integer
+          description: 實際使用月數（跨年度回顧用）
+          example: 6
+        stats:
+          $ref: '#/components/schemas/AnnualStats'
+        milestones:
+          type: array
+          description: 關鍵里程碑清單（FR-018）
+          items:
+            $ref: '#/components/schemas/MilestoneSummary'
+        trends:
+          $ref: '#/components/schemas/AnnualTrends'
+        achievements:
+          type: array
+          description: 年度成就徽章集合
+          items:
+            $ref: '#/components/schemas/AchievementSummary'
+        created_at:
+          type: string
+          format: date-time
+          description: 回顧生成時間
+          example: "2025-01-01T10:00:00Z"
+        web_url:
+          type: string
+          format: uri
+          description: 互動式網頁版 URL
+          example: "https://motionstory.com/annual-review/507f1f77bcf86cd799439016"
+
+    AnnualStats:
+      type: object
+      description: 年度統計數據（FR-018）
+      properties:
+        total_workout_days:
+          type: integer
+          description: 運動天數
+          example: 248
+        total_duration_minutes:
+          type: integer
+          description: 總運動時長（分鐘）
+          example: 12400
+        total_distance_km:
+          type: number
+          format: float
+          description: 總距離（公里）
+          example: 2145.8
+        total_calories:
+          type: integer
+          description: 總卡路里消耗
+          example: 186000
+        max_streak_days:
+          type: integer
+          description: 最長連續天數
+          example: 45
+        workout_by_type:
+          type: object
+          description: 各類運動統計
+          additionalProperties:
+            type: integer
+          example:
+            running: 180
+            cycling: 48
+            swimming: 20
+        favorite_workout_type:
+          type: string
+          description: 最常運動類型
+          example: "running"
+
+    AnnualTrends:
+      type: object
+      description: 年度趨勢分析（FR-018）
+      properties:
+        monthly_summary:
+          type: array
+          description: 逐月統計
+          items:
+            type: object
+            properties:
+              month:
+                type: integer
+                minimum: 1
+                maximum: 12
+                example: 1
+              workouts:
+                type: integer
+                example: 22
+              distance_km:
+                type: number
+                format: float
+                example: 185.4
+              duration_minutes:
+                type: integer
+                example: 1050
+        progress_percentage:
+          type: number
+          format: float
+          description: 年度進步百分比（比較首月與末月）
+          example: 35.2
+        best_month:
+          type: object
+          description: 表現最佳月份
+          properties:
+            month:
+              type: integer
+              example: 6
+            workouts:
+              type: integer
+              example: 28
+            distance_km:
+              type: number
+              format: float
+              example: 245.8
+
+    AnnualReviewResponse:
+      type: object
+      required:
+        - review
+        - generation_time_ms
+      properties:
+        review:
+          $ref: '#/components/schemas/AnnualReview'
+        generation_time_ms:
+          type: integer
+          description: 生成時間（毫秒）
+          example: 2450
+
+    ExportImagesResponse:
+      type: object
+      required:
+        - images
+        - generation_time_ms
+      properties:
+        images:
+          type: array
+          description: 圖片 URL 列表
+          items:
+            type: string
+            format: uri
+          example:
+            - "https://r2.motionstory.com/annual-review/2024/cover.png"
+            - "https://r2.motionstory.com/annual-review/2024/stats.png"
+            - "https://r2.motionstory.com/annual-review/2024/milestones.png"
+        generation_time_ms:
+          type: integer
+          description: 生成時間（毫秒）
+          example: 4200
+
+    AnnualReviewListResponse:
+      type: object
+      required:
+        - reviews
+      properties:
+        reviews:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                example: "507f1f77bcf86cd799439016"
+              year:
+                type: integer
+                example: 2024
+              created_at:
+                type: string
+                format: date-time
+                example: "2025-01-01T10:00:00Z"
+              web_url:
+                type: string
+                format: uri
+                example: "https://motionstory.com/annual-review/507f1f77bcf86cd799439016"
+
+    AchievementSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "507f1f77bcf86cd799439012"
+        achievement_type:
+          type: string
+          example: "streak_100"
+        name:
+          type: string
+          example: "百日達人"
+        celebration_level:
+          type: string
+          enum: [basic, fireworks, epic]
+          example: "epic"
+
+    Pagination:
+      type: object
+      required:
+        - has_more
+      properties:
+        next_cursor:
+          type: string
+          nullable: true
+          example: "eyJzdGFydF90aW1lIjoiMjAyNS0wMS0xNVQwODozMDowMFoifQ=="
+        has_more:
+          type: boolean
+          example: true
+        total_count:
+          type: integer
+          nullable: true
+          example: 248
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          example: "BAD_REQUEST"
+        message:
+          type: string
+          example: "Invalid input parameters"
+        details:
+          type: object
+          additionalProperties: true
+          nullable: true
+
+  responses:
+    BadRequest:
+      description: 請求參數錯誤
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: 未授權或 token 無效
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: 資源不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    InternalServerError:
+      description: 伺服器內部錯誤
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
