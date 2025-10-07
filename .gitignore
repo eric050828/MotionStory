@@ -1,0 +1,132 @@
+# ===========================
+# Python / FastAPI (api/)
+# ===========================
+
+# Virtual environments
+api/.venv/
+api/venv/
+api/env/
+api/ENV/
+
+# Python cache
+api/**/__pycache__/
+api/**/*.pyc
+api/**/*.pyo
+api/**/*.pyd
+*.py[cod]
+*$py.class
+
+# Environment variables
+api/.env
+api/.env.local
+api/.env.*.local
+
+# Distribution / packaging
+api/dist/
+api/build/
+api/*.egg-info/
+
+# Testing
+api/.pytest_cache/
+api/.coverage
+api/htmlcov/
+api/.tox/
+
+# ===========================
+# React Native / Expo (app/)
+# ===========================
+
+# Dependencies
+app/node_modules/
+
+# Expo
+app/.expo/
+app/.expo-shared/
+app/dist/
+app/web-build/
+
+# Build artifacts
+app/android/
+app/ios/
+app/*.apk
+app/*.ipa
+
+# Environment variables
+app/.env
+app/.env.local
+app/.env.*.local
+
+# Testing
+app/coverage/
+
+# ===========================
+# IDE & Editors
+# ===========================
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# JetBrains IDEs
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Vim
+*.swp
+*.swo
+*~
+
+# ===========================
+# OS Specific
+# ===========================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# ===========================
+# Logs & Temporary Files
+# ===========================
+
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+*.tmp
+*.temp
+
+# ===========================
+# Cloud & Deployment
+# ===========================
+
+# Firebase
+.firebase/
+
+# Cloudflare
+.wrangler/
+
+# ===========================
+# Project Specific
+# ===========================
+
+# Backup files
+*.backup
+*.bak
+*.example.copy
+
+# Test data
+api/test_data/
+app/test_data/

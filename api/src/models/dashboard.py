@@ -4,7 +4,7 @@ Dashboard Model
 """
 
 from datetime import datetime
-from typing import Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional
 from pydantic import BaseModel, Field, field_validator
 from bson import ObjectId
 from .user import PyObjectId
@@ -113,5 +113,5 @@ class WidgetDataResponse(BaseModel):
     """Widget 資料回應"""
     widget_id: str
     widget_type: str
-    data: Dict[str, any] = Field(..., description="Widget 資料內容")
+    data: Dict[str, Any] = Field(..., description="Widget 資料內容")
     last_updated: datetime = Field(default_factory=datetime.utcnow)
