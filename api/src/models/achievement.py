@@ -4,7 +4,7 @@ Achievement Model
 """
 
 from datetime import datetime
-from typing import Dict, Literal, Optional
+from typing import Any, Dict, Literal, Optional
 from pydantic import BaseModel, Field
 from bson import ObjectId
 from .user import PyObjectId
@@ -14,7 +14,7 @@ class AchievementBase(BaseModel):
     """Achievement 基礎模型"""
     achievement_type: str = Field(..., description="成就類型")
     celebration_level: Literal["basic", "fireworks", "epic"] = Field(..., description="慶祝等級")
-    metadata: Dict[str, any] = Field(default_factory=dict, description="成就元資料")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="成就元資料")
 
 
 class AchievementCreate(AchievementBase):
@@ -58,7 +58,7 @@ class AchievementTypeInfo(BaseModel):
     description: str = Field(..., description="成就描述")
     celebration_level: Literal["basic", "fireworks", "epic"]
     icon: str = Field(..., description="成就圖示 emoji 或 URL")
-    criteria: Dict[str, any] = Field(..., description="達成條件")
+    criteria: Dict[str, Any] = Field(..., description="達成條件")
 
 
 class AchievementStatsResponse(BaseModel):

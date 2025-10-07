@@ -4,7 +4,7 @@ Milestone Model
 """
 
 from datetime import datetime
-from typing import Dict, Literal, Optional
+from typing import Any, Dict, Literal, Optional
 from pydantic import BaseModel, Field
 from bson import ObjectId
 from .user import PyObjectId
@@ -24,7 +24,7 @@ class MilestoneBase(BaseModel):
     ] = Field(..., description="里程碑類型")
     title: str = Field(..., min_length=1, max_length=100, description="里程碑標題")
     description: Optional[str] = Field(None, max_length=500, description="詳細描述")
-    metadata: Dict[str, any] = Field(default_factory=dict, description="里程碑元資料")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="里程碑元資料")
 
 
 class MilestoneCreate(MilestoneBase):
