@@ -6,7 +6,6 @@
 import { create } from 'zustand';
 import { api } from '../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import auth from '@react-native-firebase/auth';
 
 interface User {
   id: string;
@@ -79,52 +78,15 @@ export const useAuthStore = create<AuthState>((set) => ({
   register: async (email: string, password: string, displayName: string) => {
     try {
       set({ isLoading: true, error: null });
-      
-      console.log('🔥 Step 1: Creating Firebase user...');
-      // Step 1: Create user in Firebase
-      const userCredential = await auth().createUserWithEmailAndPassword(email, password);
-      const firebaseUser = userCredential.user;
-      
-      console.log('🔥 Step 2: Updating Firebase profile...');
-      // Step 2: Update Firebase profile with display name
-      await firebaseUser.updateProfile({
-        displayName: displayName,
-      });
-      
-      console.log('🔥 Step 3: Getting Firebase ID token...');
-      // Step 3: Get Firebase ID token
-      const idToken = await firebaseUser.getIdToken();
-      
-      console.log('🔥 Step 4: Registering with backend...');
-      console.log('Firebase UID:', firebaseUser.uid);
-      // Step 4: Register with backend using Firebase UID
-      const response = await api.register(email, password, displayName, firebaseUser.uid);
-      
-      console.log('✅ Registration successful!');
+      const response = await api.register(email, password, displayName);
       set({
         user: response.user,
         isAuthenticated: true,
         isLoading: false,
       });
     } catch (error: any) {
-      console.error('❌ Registration error:', error);
-      
-      // Handle Firebase errors
-      let errorMessage = 'Registration failed';
-      if (error.code === 'auth/email-already-in-use') {
-        errorMessage = 'Email 已被註冊';
-      } else if (error.code === 'auth/weak-password') {
-        errorMessage = '密碼強度不足';
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = 'Email 格式錯誤';
-      } else if (error.response?.data?.detail) {
-        errorMessage = error.response.data.detail;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
       set({
-        error: errorMessage,
+        error: error.response?.data?.detail || 'Registration failed',
         isLoading: false,
       });
       throw error;

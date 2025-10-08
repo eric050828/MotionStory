@@ -58,16 +58,15 @@ class ApiService {
   }
 
   // Auth endpoints
-  async register(email: string, password: string, displayName: string, firebaseUid: string) {
+  async register(email: string, password: string, displayName: string) {
     try {
       console.log('🚀 API Register - Sending request to:', `${API_BASE_URL}/auth/register`);
-      console.log('📝 Register data:', { email, displayName, firebaseUid });
+      console.log('📝 Register data:', { email, displayName });
       
       const response = await this.client.post('/auth/register', {
         email,
         password,
         display_name: displayName,
-        firebase_uid: firebaseUid,
       });
       
       console.log('✅ Register response:', response.data);
