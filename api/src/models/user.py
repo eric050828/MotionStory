@@ -99,7 +99,7 @@ class UserInDB(UserBase):
 
 class UserResponse(UserBase):
     """API 回傳的 User 模型 (不含敏感資訊)"""
-    id: str = Field(..., alias="_id")
+    id: str
     created_at: datetime
     updated_at: datetime
     last_login_at: Optional[datetime] = None

@@ -15,6 +15,7 @@ import asyncio
 from httpx import AsyncClient
 from motor.motor_asyncio import AsyncIOMotorClient
 from typing import AsyncGenerator
+from unittest.mock import patch, AsyncMock
 
 from src.main import app
 from src.core.config import settings
@@ -49,17 +50,29 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
     """HTTP 測試客戶端"""
     # 初始化資料庫連線
     await MongoDB.connect()
-    try:
-        # 清理測試資料庫（在每個測試之前）
-        db = MongoDB.get_database()
-        for collection_name in await db.list_collection_names():
-            await db[collection_name].delete_many({})
 
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            yield ac
-    finally:
-        # 清理資料庫連線
-        await MongoDB.disconnect()
+    # Mock Firebase 功能
+    with patch('src.routers.auth.create_firebase_user') as mock_create_firebase, \
+         patch('src.routers.auth.delete_firebase_user') as mock_delete_firebase:
+
+        # Mock create_firebase_user 回傳假的 Firebase UID
+        async def mock_create_user(email: str, password: str):
+            return {"uid": f"firebase_{email.replace('@', '_').replace('.', '_')}", "email": email}
+
+        mock_create_firebase.side_effect = mock_create_user
+        mock_delete_firebase.return_value = AsyncMock()
+
+        try:
+            # 清理測試資料庫（在每個測試之前）
+            db = MongoDB.get_database()
+            for collection_name in await db.list_collection_names():
+                await db[collection_name].delete_many({})
+
+            async with AsyncClient(app=app, base_url="http://test") as ac:
+                yield ac
+        finally:
+            # 清理資料庫連線
+            await MongoDB.disconnect()
 
 
 @pytest.fixture(scope="function")

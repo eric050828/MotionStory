@@ -83,7 +83,9 @@ async def register(
             preferences=user_data.preferences
         )
 
-        result = await db.users.insert_one(user.dict(by_alias=True))
+        # 插入時排除 id 欄位，讓 MongoDB 自動生成
+        user_dict = user.model_dump(by_alias=True, exclude={'id'})
+        result = await db.users.insert_one(user_dict)
         user_id = result.inserted_id
 
         # 建立預設儀表板
@@ -96,14 +98,26 @@ async def register(
             expires_delta=timedelta(days=7)
         )
 
-        # 設置 user.id 以便回傳正確的 response
-        user.id = user_id
+        # 建立 UserResponse
+        user_response = UserResponse(
+            id=str(user_id),
+            firebase_uid=user.firebase_uid,
+            email=user.email,
+            display_name=user.display_name,
+            avatar_url=user.avatar_url,
+            created_at=user.created_at,
+            updated_at=user.updated_at,
+            last_login_at=user.last_login_at,
+            privacy_settings=user.privacy_settings,
+            preferences=user.preferences,
+            subscription=user.subscription
+        )
 
         return {
             "access_token": access_token,
             "token_type": "Bearer",
             "expires_in": 604800,  # 7 天
-            "user": UserResponse(**user.dict(by_alias=True))
+            "user": user_response
         }
 
     except ValueError as e:
@@ -187,11 +201,25 @@ async def login(
         expires_delta=timedelta(days=7)
     )
 
+    user_response = UserResponse(
+        id=str(user.id),
+        firebase_uid=user.firebase_uid,
+        email=user.email,
+        display_name=user.display_name,
+        avatar_url=user.avatar_url,
+        created_at=user.created_at,
+        updated_at=user.updated_at,
+        last_login_at=user.last_login_at,
+        privacy_settings=user.privacy_settings,
+        preferences=user.preferences,
+        subscription=user.subscription
+    )
+
     return {
         "access_token": access_token,
         "token_type": "Bearer",
         "expires_in": 604800,
-        "user": UserResponse(**user.dict(by_alias=True))
+        "user": user_response
     }
 
 
@@ -226,33 +254,50 @@ async def google_oauth(
                 password_hash="",  # Google OAuth 不需要密碼
             )
 
-            result = await db.users.insert_one(user.dict(by_alias=True))
-            user.id = result.inserted_id
+            user_dict = user.model_dump(by_alias=True, exclude={'id'})
+            result = await db.users.insert_one(user_dict)
+            user_id = result.inserted_id
 
             # 建立預設儀表板
             dashboard_service = DashboardService(db)
-            await dashboard_service.create_default_dashboard(str(user.id))
+            await dashboard_service.create_default_dashboard(str(user_id))
 
         else:
             user = UserInDB(**user_doc)
+            user_id = user.id
 
         # 更新最後登入時間
         await db.users.update_one(
-            {"_id": user.id},
+            {"_id": user_id},
             {"$set": {"last_login_at": datetime.now(timezone.utc)}}
         )
 
         # 生成 JWT token
         access_token = create_access_token(
-            data={"user_id": str(user.id)},
+            data={"user_id": str(user_id)},
             expires_delta=timedelta(days=7)
+        )
+
+        # 建立 UserResponse
+        user_response = UserResponse(
+            id=str(user_id),
+            firebase_uid=user.firebase_uid,
+            email=user.email,
+            display_name=user.display_name,
+            avatar_url=user.avatar_url,
+            created_at=user.created_at,
+            updated_at=user.updated_at,
+            last_login_at=user.last_login_at,
+            privacy_settings=user.privacy_settings,
+            preferences=user.preferences,
+            subscription=user.subscription
         )
 
         return {
             "access_token": access_token,
             "token_type": "Bearer",
-            "expires_in": 604800,
-            "user": UserResponse(**user.dict(by_alias=True))
+            "expires_in": 604800,  # 7 天
+            "user": user_response
         }
 
     except ValueError as e:
@@ -280,7 +325,20 @@ async def get_current_user(
             detail="User not found"
         )
 
-    return UserResponse(**user_doc)
+    user = UserInDB(**user_doc)
+    return UserResponse(
+        id=str(user.id),
+        firebase_uid=user.firebase_uid,
+        email=user.email,
+        display_name=user.display_name,
+        avatar_url=user.avatar_url,
+        created_at=user.created_at,
+        updated_at=user.updated_at,
+        last_login_at=user.last_login_at,
+        privacy_settings=user.privacy_settings,
+        preferences=user.preferences,
+        subscription=user.subscription
+    )
 
 
 @router.put("/me/privacy", response_model=UserResponse)
@@ -311,7 +369,20 @@ async def update_privacy_settings(
             detail="User not found"
         )
 
-    return UserResponse(**result)
+    user = UserInDB(**result)
+    return UserResponse(
+        id=str(user.id),
+        firebase_uid=user.firebase_uid,
+        email=user.email,
+        display_name=user.display_name,
+        avatar_url=user.avatar_url,
+        created_at=user.created_at,
+        updated_at=user.updated_at,
+        last_login_at=user.last_login_at,
+        privacy_settings=user.privacy_settings,
+        preferences=user.preferences,
+        subscription=user.subscription
+    )
 
 
 @router.delete("/delete", status_code=status.HTTP_204_NO_CONTENT)
