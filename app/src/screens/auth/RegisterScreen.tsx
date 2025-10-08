@@ -71,10 +71,21 @@ const RegisterScreen: React.FC = () => {
     if (!validateForm()) return;
 
     try {
+      console.log('📝 Starting registration...');
+      console.log('Email:', formData.email);
+      console.log('Display name:', formData.displayName);
+      
       await register(formData.email, formData.password, formData.displayName);
+      
+      console.log('✅ Registration successful!');
       // 註冊成功後會自動導航到主畫面 (由 RootNavigator 處理)
     } catch (err: any) {
-      Alert.alert('註冊失敗', err.message || '請稍後再試');
+      console.error('❌ Registration failed:', err);
+      console.error('Error message:', err.message);
+      console.error('Error response:', err.response?.data);
+      
+      const errorMessage = err.response?.data?.detail || err.message || '請稍後再試';
+      Alert.alert('註冊失敗', errorMessage);
     }
   };
 

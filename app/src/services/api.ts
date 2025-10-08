@@ -8,6 +8,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
+console.log('🔧 API Configuration:');
+console.log('  - EXPO_PUBLIC_API_URL:', process.env.EXPO_PUBLIC_API_URL);
+console.log('  - Using API_BASE_URL:', API_BASE_URL);
+
 class ApiService {
   private client: AxiosInstance;
 
@@ -48,12 +52,28 @@ class ApiService {
 
   // Auth endpoints
   async register(email: string, password: string, displayName: string) {
-    const response = await this.client.post('/auth/register', {
-      email,
-      password,
-      display_name: displayName,
-    });
-    return response.data;
+    try {
+      console.log('🚀 API Register - Sending request to:', `${API_BASE_URL}/auth/register`);
+      console.log('📝 Register data:', { email, displayName });
+      
+      const response = await this.client.post('/auth/register', {
+        email,
+        password,
+        display_name: displayName,
+      });
+      
+      console.log('✅ Register response:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Register error:', error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      throw error;
+    }
   }
 
   async login(email: string, password: string) {
