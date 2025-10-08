@@ -14,7 +14,7 @@ import {
   Alert,
 } from 'react-native';
 import { useAuthStore } from '../store/useAuthStore';
-import { Button } from '../../components/Button';
+import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 
 export const LoginScreen: React.FC = () => {
