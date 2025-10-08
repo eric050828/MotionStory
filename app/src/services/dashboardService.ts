@@ -4,6 +4,7 @@
  */
 
 import axios, { AxiosInstance } from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   Dashboard,
   Widget,
@@ -13,7 +14,6 @@ import {
   UpdateWidgetRequest,
   DashboardTemplate,
 } from '../types/dashboard';
-import authService from './authService';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
@@ -30,8 +30,8 @@ class DashboardService {
 
     // Add auth token to requests
     this.api.interceptors.request.use(
-      (config) => {
-        const token = authService.getToken();
+      async (config) => {
+        const token = await AsyncStorage.getItem('access_token');
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
