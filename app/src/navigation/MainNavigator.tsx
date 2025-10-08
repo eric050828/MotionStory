@@ -16,7 +16,7 @@ import DragDropEditorScreen from '../screens/dashboard/DragDropEditorScreen';
 // Workout Stack
 import WorkoutListScreen from '../screens/workouts/WorkoutListScreen';
 import WorkoutDetailScreen from '../screens/workouts/WorkoutDetailScreen';
-import WorkoutFormScreen from '../screens/WorkoutFormScreen';
+import { WorkoutFormScreen } from '../screens/WorkoutFormScreen';
 import WorkoutImportScreen from '../screens/workouts/WorkoutImportScreen';
 
 // Timeline Stack
