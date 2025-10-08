@@ -84,7 +84,7 @@ class DashboardUpdate(BaseModel):
 class DashboardInDB(DashboardBase):
     """資料庫中的 Dashboard 模型"""
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
-    user_id: PyObjectId = Field(..., description="使用者 ID")
+    user_id: str = Field(..., description="使用者 ID")
     is_default: bool = Field(default=False, description="是否為預設儀表板")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)

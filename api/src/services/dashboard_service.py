@@ -49,7 +49,7 @@ class DashboardService:
             )
 
         dashboard = DashboardInDB(
-            user_id=ObjectId(user_id),
+            user_id=user_id,
             **dashboard_data.dict()
         )
 
@@ -118,7 +118,7 @@ class DashboardService:
         """
         dashboard = await self.dashboards_collection.find_one({
             "_id": ObjectId(dashboard_id),
-            "user_id": ObjectId(user_id)
+            "user_id": user_id
         })
 
         if not dashboard:
@@ -137,7 +137,7 @@ class DashboardService:
             List[DashboardInDB]: 儀表板列表
         """
         dashboards = await self.dashboards_collection.find({
-            "user_id": ObjectId(user_id)
+            "user_id": user_id
         }).sort("created_at", -1).to_list(length=None)
 
         return [DashboardInDB(**d) for d in dashboards]
@@ -153,7 +153,7 @@ class DashboardService:
             Optional[DashboardInDB]: 預設儀表板
         """
         dashboard = await self.dashboards_collection.find_one({
-            "user_id": ObjectId(user_id),
+            "user_id": user_id,
             "is_default": True
         })
 
@@ -193,7 +193,7 @@ class DashboardService:
         result = await self.dashboards_collection.find_one_and_update(
             {
                 "_id": ObjectId(dashboard_id),
-                "user_id": ObjectId(user_id)
+                "user_id": user_id
             },
             {"$set": update_data},
             return_document=True
@@ -221,7 +221,7 @@ class DashboardService:
         # 檢查是否為預設儀表板
         dashboard = await self.dashboards_collection.find_one({
             "_id": ObjectId(dashboard_id),
-            "user_id": ObjectId(user_id)
+            "user_id": user_id
         })
 
         if not dashboard:
@@ -232,7 +232,7 @@ class DashboardService:
 
         result = await self.dashboards_collection.delete_one({
             "_id": ObjectId(dashboard_id),
-            "user_id": ObjectId(user_id)
+            "user_id": user_id
         })
 
         return result.deleted_count > 0
@@ -253,7 +253,7 @@ class DashboardService:
         # 取消其他預設儀表板
         await self.dashboards_collection.update_many(
             {
-                "user_id": ObjectId(user_id),
+                "user_id": user_id,
                 "is_default": True
             },
             {"$set": {"is_default": False}}
@@ -263,7 +263,7 @@ class DashboardService:
         result = await self.dashboards_collection.find_one_and_update(
             {
                 "_id": ObjectId(dashboard_id),
-                "user_id": ObjectId(user_id)
+                "user_id": user_id
             },
             {"$set": {"is_default": True, "updated_at": datetime.now(timezone.utc)}},
             return_document=True
