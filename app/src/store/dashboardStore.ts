@@ -80,12 +80,21 @@ const useDashboardStore = create<DashboardState>((set, get) => ({
 
   // Fetch Default Dashboard
   fetchDefaultDashboard: async () => {
+    console.log('🎯 fetchDefaultDashboard called');
     set({ loading: true, error: null });
 
     try {
+      console.log('📡 Calling dashboardService.getDefaultDashboard()');
       const dashboard = await dashboardService.getDefaultDashboard();
+      console.log('✅ Dashboard fetched:', dashboard);
       set({ currentDashboard: dashboard, loading: false });
     } catch (error: any) {
+      console.error('❌ Failed to fetch dashboard:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
       set({ error: error.message || 'Failed to fetch default dashboard', loading: false });
     }
   },

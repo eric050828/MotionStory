@@ -64,8 +64,21 @@ class DashboardService {
    * Get default dashboard
    */
   async getDefaultDashboard(): Promise<Dashboard> {
-    const response = await this.api.get('/dashboards/default');
-    return response.data;
+    console.log('🔍 dashboardService.getDefaultDashboard - Making request to:', `${API_BASE_URL}/dashboards/default`);
+    try {
+      const response = await this.api.get('/dashboards/default');
+      console.log('✅ dashboardService.getDefaultDashboard - Response:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ dashboardService.getDefaultDashboard - Error:', error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      throw error;
+    }
   }
 
   /**
