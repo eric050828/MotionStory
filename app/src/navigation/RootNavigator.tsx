@@ -8,7 +8,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuthStore } from '../store/useAuthStore';
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
-import Loading from '../components/ui/Loading';
+import { Loading } from '../components/ui/Loading';
 
 const Stack = createNativeStackNavigator();
 
