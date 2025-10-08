@@ -15,8 +15,8 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import useDashboardStore from '../../store/dashboardStore';
 import { Widget } from '../../types/dashboard';
-import Loading from '../../components/ui/Loading';
-import Button from '../../components/Button';
+import { Loading } from '../../components/ui/Loading';
+import { Button } from '../../components/Button';
 
 const DashboardStudioScreen: React.FC = () => {
   const navigation = useNavigation();

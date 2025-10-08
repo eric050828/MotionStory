@@ -15,8 +15,8 @@ import {
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import useWorkoutStore from '../../store/workoutStore';
 import { Workout, WorkoutType } from '../../types/workout';
-import Loading from '../../components/ui/Loading';
-import Button from '../../components/Button';
+import { Loading } from '../../components/ui/Loading';
+import { Button } from '../../components/Button';
 
 type RouteParams = {
   WorkoutDetail: {

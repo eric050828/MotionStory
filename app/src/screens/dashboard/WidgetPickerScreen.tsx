@@ -15,7 +15,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import useDashboardStore from '../../store/dashboardStore';
 import { WidgetType, WIDGET_TEMPLATES } from '../../types/dashboard';
-import Button from '../../components/Button';
+import { Button } from '../../components/Button';
 
 type WidgetCategory = 'all' | 'stats' | 'charts' | 'activity' | 'actions';
 

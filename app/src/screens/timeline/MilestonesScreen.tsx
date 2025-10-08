@@ -14,8 +14,8 @@ import {
 } from 'react-native';
 import { Milestone, MILESTONE_ICONS } from '../../types/timeline';
 import timelineService from '../../services/timelineService';
-import Button from '../../components/Button';
-import Loading from '../../components/ui/Loading';
+import { Button } from '../../components/Button';
+import { Loading } from '../../components/ui/Loading';
 
 const MilestonesScreen: React.FC = () => {
   const [milestones, setMilestones] = useState<Milestone[]>([]);

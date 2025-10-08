@@ -13,8 +13,8 @@ import {
 } from 'react-native';
 import { AnnualReview } from '../../types/timeline';
 import timelineService from '../../services/timelineService';
-import Button from '../../components/Button';
-import Loading from '../../components/ui/Loading';
+import { Button } from '../../components/Button';
+import { Loading } from '../../components/ui/Loading';
 import BarChartWidget from '../../components/charts/BarChartWidget';
 import PieChartWidget from '../../components/charts/PieChartWidget';
 

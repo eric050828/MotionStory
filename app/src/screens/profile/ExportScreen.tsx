@@ -15,7 +15,7 @@ import {
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import workoutService from '../../services/workoutService';
-import Button from '../../components/Button';
+import { Button } from '../../components/Button';
 
 type ExportFormat = 'csv' | 'json';
 

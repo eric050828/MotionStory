@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '../../store/useAuthStore';
-import Button from '../../components/Button';
+import { Button } from '../../components/Button';
 
 const SettingsScreen: React.FC = () => {
   const navigation = useNavigation();

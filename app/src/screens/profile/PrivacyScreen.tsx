@@ -13,7 +13,7 @@ import {
   Alert,
 } from 'react-native';
 import { useAuthStore } from '../../store/useAuthStore';
-import Button from '../../components/Button';
+import { Button } from '../../components/Button';
 
 const PrivacyScreen: React.FC = () => {
   const { user, updatePrivacySettings } = useAuthStore();

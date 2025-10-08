@@ -15,7 +15,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { TimelineEvent, TIMELINE_EVENT_COLORS } from '../../types/timeline';
 import timelineService from '../../services/timelineService';
-import Loading from '../../components/ui/Loading';
+import { Loading } from '../../components/ui/Loading';
 
 const TimelineScreen: React.FC = () => {
   const navigation = useNavigation();

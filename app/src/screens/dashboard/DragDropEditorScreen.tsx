@@ -17,7 +17,7 @@ import { GestureHandlerRootView, PanGestureHandler } from 'react-native-gesture-
 import Animated from 'react-native-reanimated';
 import useDashboardStore from '../../store/dashboardStore';
 import { Widget } from '../../types/dashboard';
-import Button from '../../components/Button';
+import { Button } from '../../components/Button';
 
 const DragDropEditorScreen: React.FC = () => {
   const navigation = useNavigation();

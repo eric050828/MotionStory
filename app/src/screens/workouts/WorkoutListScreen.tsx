@@ -16,8 +16,8 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import useWorkoutStore from '../../store/workoutStore';
 import { Workout, WorkoutType } from '../../types/workout';
-import Loading from '../../components/ui/Loading';
-import Button from '../../components/Button';
+import { Loading } from '../../components/ui/Loading';
+import { Button } from '../../components/Button';
 
 const WORKOUT_TYPE_ICONS: Record<WorkoutType, string> = {
   running: '🏃',

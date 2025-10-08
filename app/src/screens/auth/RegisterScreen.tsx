@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '../../store/useAuthStore';
-import Button from '../../components/Button';
+import { Button } from '../../components/Button';
 import Input from '../../components/Input';
 
 const RegisterScreen: React.FC = () => {

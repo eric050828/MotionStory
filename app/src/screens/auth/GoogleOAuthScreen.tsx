@@ -16,7 +16,7 @@ import { useNavigation } from '@react-navigation/native';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import auth from '@react-native-firebase/auth';
 import { useAuthStore } from '../../store/useAuthStore';
-import Button from '../../components/Button';
+import { Button } from '../../components/Button';
 
 const GoogleOAuthScreen: React.FC = () => {
   const navigation = useNavigation();

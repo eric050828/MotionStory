@@ -16,7 +16,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import { useNavigation } from '@react-navigation/native';
 import useWorkoutStore from '../../store/workoutStore';
-import Button from '../../components/Button';
+import { Button } from '../../components/Button';
 
 const WorkoutImportScreen: React.FC = () => {
   const navigation = useNavigation();
