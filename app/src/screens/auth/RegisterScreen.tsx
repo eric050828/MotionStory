@@ -17,6 +17,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '../../store/useAuthStore';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
+import { extractErrorMessage } from '../../utils/errorHandler';
 
 const RegisterScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -74,18 +75,17 @@ const RegisterScreen: React.FC = () => {
       console.log('📝 Starting registration...');
       console.log('Email:', formData.email);
       console.log('Display name:', formData.displayName);
-      
+
       await register(formData.email, formData.password, formData.displayName);
-      
+
       console.log('✅ Registration successful!');
       // 註冊成功後會自動導航到主畫面 (由 RootNavigator 處理)
     } catch (err: any) {
       console.error('❌ Registration failed:', err);
       console.error('Error message:', err.message);
       console.error('Error response:', err.response?.data);
-      
-      const errorMessage = err.response?.data?.detail || err.message || '請稍後再試';
-      Alert.alert('註冊失敗', errorMessage);
+
+      Alert.alert('註冊失敗', extractErrorMessage(err));
     }
   };
 

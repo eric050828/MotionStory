@@ -17,6 +17,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '../store/useAuthStore';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
+import { extractErrorMessage } from '../utils/errorHandler';
 
 export const LoginScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -66,10 +67,7 @@ export const LoginScreen: React.FC = () => {
       await login(email, password);
       // Navigation will be handled by auth state change
     } catch (error: any) {
-      Alert.alert(
-        '登入失敗',
-        error.response?.data?.detail || '請檢查您的帳號密碼'
-      );
+      Alert.alert('登入失敗', extractErrorMessage(error, '請檢查您的帳號密碼'));
     }
   };
 
