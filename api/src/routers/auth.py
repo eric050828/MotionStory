@@ -104,10 +104,16 @@ async def register(
         }
 
     except ValueError as e:
-        # 回滾：刪除 Firebase 使用者
+        # 回滾：刪除 Firebase 使用者和 MongoDB 使用者
         if 'firebase_user' in locals():
             try:
                 await delete_firebase_user(firebase_user["uid"])
+            except:
+                pass
+
+        if 'user' in locals() and hasattr(user, 'id'):
+            try:
+                await db.users.delete_one({"_id": user.id})
             except:
                 pass
 
@@ -116,10 +122,16 @@ async def register(
             detail=str(e)
         )
     except Exception as e:
-        # 回滾：刪除 Firebase 使用者
+        # 回滾：刪除 Firebase 使用者和 MongoDB 使用者
         if 'firebase_user' in locals():
             try:
                 await delete_firebase_user(firebase_user["uid"])
+            except:
+                pass
+
+        if 'user' in locals() and hasattr(user, 'id'):
+            try:
+                await db.users.delete_one({"_id": user.id})
             except:
                 pass
 
