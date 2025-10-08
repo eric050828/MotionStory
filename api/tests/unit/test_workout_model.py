@@ -7,7 +7,7 @@ import pytest
 from datetime import datetime, timezone
 from pydantic import ValidationError
 
-from api.src.models.workout import (
+from src.models.workout import (
     WorkoutCreate,
     WorkoutUpdate,
     GeoLocation,

@@ -6,7 +6,7 @@ T029: Dashboard Model 驗證測試
 import pytest
 from pydantic import ValidationError
 
-from api.src.models.dashboard import (
+from src.models.dashboard import (
     DashboardCreate,
     DashboardUpdate,
     Widget,

@@ -8,8 +8,8 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock
 from bson import ObjectId
 
-from api.src.services.achievement_service import AchievementService
-from api.src.models.workout import WorkoutInDB
+from src.services.achievement_service import AchievementService
+from src.models.workout import WorkoutInDB
 
 
 class TestAchievementServiceFirstWorkout:

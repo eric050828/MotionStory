@@ -8,8 +8,8 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 from bson import ObjectId
 
-from api.src.services.workout_service import WorkoutService
-from api.src.models.workout import WorkoutCreate, WorkoutUpdate
+from src.services.workout_service import WorkoutService
+from src.models.workout import WorkoutCreate, WorkoutUpdate
 
 
 class TestWorkoutServiceCRUD:

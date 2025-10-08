@@ -7,7 +7,7 @@ import pytest
 from datetime import datetime, timezone
 from pydantic import ValidationError
 
-from api.src.models.achievement import (
+from src.models.achievement import (
     AchievementCreate,
     AchievementTypeInfo,
     ShareCardRequest,

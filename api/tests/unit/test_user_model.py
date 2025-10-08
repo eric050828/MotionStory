@@ -7,7 +7,7 @@ import pytest
 from datetime import datetime
 from pydantic import ValidationError
 
-from api.src.models.user import (
+from src.models.user import (
     UserCreate,
     UserUpdate,
     PrivacySettings,
