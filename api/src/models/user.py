@@ -60,9 +60,12 @@ class UserBase(BaseModel):
     avatar_url: Optional[str] = Field(default=None, description="使用者頭像 URL")
 
 
-class UserCreate(UserBase):
-    """建立使用者請求模型"""
+class UserCreate(BaseModel):
+    """建立使用者請求模型 (不包含 firebase_uid，由後端生成)"""
+    email: EmailStr = Field(..., description="使用者 Email")
     password: str = Field(..., min_length=8, description="密碼 (建立時需要)")
+    display_name: str = Field(..., min_length=1, max_length=50, description="顯示名稱")
+    avatar_url: Optional[str] = Field(default=None, description="使用者頭像 URL")
     privacy_settings: Optional[PrivacySettings] = Field(default_factory=PrivacySettings)
     preferences: Optional[UserPreferences] = Field(default_factory=UserPreferences)
 
