@@ -47,8 +47,19 @@ async def test_db():
 @pytest.fixture(scope="function")
 async def client() -> AsyncGenerator[AsyncClient, None]:
     """HTTP 測試客戶端"""
-    async with AsyncClient(app=app, base_url="http://test") as ac:
-        yield ac
+    # 初始化資料庫連線
+    await MongoDB.connect()
+    try:
+        # 清理測試資料庫（在每個測試之前）
+        db = MongoDB.get_database()
+        for collection_name in await db.list_collection_names():
+            await db[collection_name].delete_many({})
+
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            yield ac
+    finally:
+        # 清理資料庫連線
+        await MongoDB.disconnect()
 
 
 @pytest.fixture(scope="function")
