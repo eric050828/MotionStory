@@ -84,17 +84,20 @@ async def register(
         )
 
         result = await db.users.insert_one(user.dict(by_alias=True))
-        user.id = result.inserted_id
+        user_id = result.inserted_id
 
         # 建立預設儀表板
         dashboard_service = DashboardService(db)
-        await dashboard_service.create_default_dashboard(str(user.id))
+        await dashboard_service.create_default_dashboard(str(user_id))
 
         # 生成 JWT token
         access_token = create_access_token(
-            data={"user_id": str(user.id)},
+            data={"user_id": str(user_id)},
             expires_delta=timedelta(days=7)
         )
+
+        # 設置 user.id 以便回傳正確的 response
+        user.id = user_id
 
         return {
             "access_token": access_token,
@@ -111,9 +114,9 @@ async def register(
             except:
                 pass
 
-        if 'user' in locals() and hasattr(user, 'id'):
+        if 'user_id' in locals():
             try:
-                await db.users.delete_one({"_id": user.id})
+                await db.users.delete_one({"_id": user_id})
             except:
                 pass
 
@@ -129,9 +132,9 @@ async def register(
             except:
                 pass
 
-        if 'user' in locals() and hasattr(user, 'id'):
+        if 'user_id' in locals():
             try:
-                await db.users.delete_one({"_id": user.id})
+                await db.users.delete_one({"_id": user_id})
             except:
                 pass
 
