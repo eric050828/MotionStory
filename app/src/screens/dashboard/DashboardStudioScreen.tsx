@@ -94,8 +94,8 @@ const DashboardStudioScreen: React.FC = () => {
               style={[
                 styles.widgetPreview,
                 {
-                  width: `${(widget.dimensions.width / currentDashboard.grid_columns) * 100}%`,
-                  height: widget.dimensions.height * 120,
+                  width: `${(widget.size.width / 12) * 100}%`,
+                  height: widget.size.height * 60,
                 },
                 editMode && styles.widgetPreviewEdit,
               ]}
@@ -116,7 +116,7 @@ const DashboardStudioScreen: React.FC = () => {
                   {widget.type.replace(/_/g, ' ').toUpperCase()}
                 </Text>
                 <Text style={styles.widgetSize}>
-                  {widget.dimensions.width}x{widget.dimensions.height}
+                  {widget.size.width}x{widget.size.height}
                 </Text>
               </View>
 
