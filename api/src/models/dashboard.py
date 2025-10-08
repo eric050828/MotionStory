@@ -98,7 +98,7 @@ class DashboardInDB(DashboardBase):
 
 class DashboardResponse(DashboardBase):
     """API 回傳的 Dashboard 模型"""
-    id: str = Field(..., alias="_id")
+    id: str
     user_id: str
     is_default: bool
     created_at: datetime

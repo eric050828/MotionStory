@@ -19,6 +19,20 @@ from ..services import DashboardService
 router = APIRouter(prefix="/dashboards", tags=["Dashboards"])
 
 
+def to_dashboard_response(dashboard) -> DashboardResponse:
+    """Convert DashboardInDB to DashboardResponse"""
+    return DashboardResponse(
+        id=str(dashboard.id),
+        user_id=str(dashboard.user_id),
+        name=dashboard.name,
+        widgets=dashboard.widgets,
+        is_default=dashboard.is_default,
+        created_at=dashboard.created_at,
+        updated_at=dashboard.updated_at,
+        last_accessed_at=dashboard.last_accessed_at
+    )
+
+
 @router.get("", response_model=List[DashboardResponse])
 async def list_dashboards(
     current_user_id: str = Depends(get_current_user_id),
@@ -33,7 +47,7 @@ async def list_dashboards(
 
     dashboards = await dashboard_service.list_dashboards(current_user_id)
 
-    return [DashboardResponse(**d.dict(by_alias=True)) for d in dashboards]
+    return [to_dashboard_response(d) for d in dashboards]
 
 
 @router.get("/default", response_model=DashboardResponse)
@@ -54,7 +68,7 @@ async def get_default_dashboard(
             detail="Default dashboard not found"
         )
 
-    return DashboardResponse(**dashboard.dict(by_alias=True))
+    return to_dashboard_response(dashboard)
 
 
 @router.get("/{dashboard_id}", response_model=DashboardResponse)
@@ -76,7 +90,7 @@ async def get_dashboard(
             detail="Dashboard not found"
         )
 
-    return DashboardResponse(**dashboard.dict(by_alias=True))
+    return to_dashboard_response(dashboard)
 
 
 @router.post("", response_model=DashboardResponse, status_code=status.HTTP_201_CREATED)
@@ -103,7 +117,7 @@ async def create_dashboard(
             detail=str(e)
         )
 
-    return DashboardResponse(**dashboard.dict(by_alias=True))
+    return to_dashboard_response(dashboard)
 
 
 @router.put("/{dashboard_id}", response_model=DashboardResponse)
@@ -137,7 +151,7 @@ async def update_dashboard(
             detail="Dashboard not found"
         )
 
-    return DashboardResponse(**dashboard.dict(by_alias=True))
+    return to_dashboard_response(dashboard)
 
 
 @router.delete("/{dashboard_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -191,4 +205,4 @@ async def set_default_dashboard(
             detail="Dashboard not found"
         )
 
-    return DashboardResponse(**dashboard.dict(by_alias=True))
+    return to_dashboard_response(dashboard)
