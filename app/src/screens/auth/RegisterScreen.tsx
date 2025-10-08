@@ -16,7 +16,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '../../store/useAuthStore';
 import { Button } from '../../components/Button';
-import Input from '../../components/Input';
+import { Input } from '../../components/Input';
 
 const RegisterScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -122,7 +122,7 @@ const RegisterScreen: React.FC = () => {
             value={formData.password}
             onChangeText={(text) => setFormData({ ...formData, password: text })}
             error={errors.password}
-            secureTextEntry
+            isPassword
           />
 
           <Input
@@ -131,7 +131,7 @@ const RegisterScreen: React.FC = () => {
             value={formData.confirmPassword}
             onChangeText={(text) => setFormData({ ...formData, confirmPassword: text })}
             error={errors.confirmPassword}
-            secureTextEntry
+            isPassword
           />
 
           {error && (
