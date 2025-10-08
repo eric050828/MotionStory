@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Literal, Optional
 from pydantic import BaseModel, Field, field_validator
 from bson import ObjectId
 from .user import PyObjectId
+import uuid
 
 
 class WidgetPosition(BaseModel):
@@ -32,7 +33,7 @@ class WidgetConfig(BaseModel):
 
 class Widget(BaseModel):
     """Widget 模型"""
-    id: str = Field(..., description="Widget 唯一識別碼")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), description="Widget 唯一識別碼")
     type: Literal[
         "streak_counter",
         "weekly_stats",
