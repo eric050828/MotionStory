@@ -13,11 +13,13 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '../store/useAuthStore';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 
 export const LoginScreen: React.FC = () => {
+  const navigation = useNavigation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [emailError, setEmailError] = useState('');
@@ -142,10 +144,7 @@ export const LoginScreen: React.FC = () => {
 
           <Button
             title="還沒有帳號？立即註冊"
-            onPress={() => {
-              // TODO: Navigate to register screen
-              Alert.alert('開發中', '註冊功能開發中');
-            }}
+            onPress={() => navigation.navigate('Register' as never)}
             variant="secondary"
             style={styles.registerButton}
           />
