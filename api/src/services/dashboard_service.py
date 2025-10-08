@@ -53,10 +53,8 @@ class DashboardService:
             **dashboard_data.dict()
         )
 
-        result = await self.dashboards_collection.insert_one(
-            dashboard.dict(by_alias=True)
-        )
-
+        dashboard_dict = dashboard.model_dump(by_alias=True, exclude={'id'})
+        result = await self.dashboards_collection.insert_one(dashboard_dict)
         dashboard.id = result.inserted_id
         return dashboard
 
