@@ -28,9 +28,16 @@ from ..models import (
     UserInDB,
     PrivacySettings,
 )
+from pydantic import BaseModel, EmailStr
 from ..services import DashboardService
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+
+class LoginRequest(BaseModel):
+    """登入請求模型"""
+    email: EmailStr
+    password: str
 
 
 @router.post("/register", response_model=Dict, status_code=status.HTTP_201_CREATED)
@@ -117,15 +124,14 @@ async def register(
 
 @router.post("/login", response_model=Dict)
 async def login(
-    email: str,
-    password: str,
+    login_data: LoginRequest,
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """
     Email/密碼登入
     """
     # 查詢使用者
-    user_doc = await db.users.find_one({"email": email})
+    user_doc = await db.users.find_one({"email": login_data.email})
 
     if not user_doc:
         raise HTTPException(
@@ -136,7 +142,7 @@ async def login(
     user = UserInDB(**user_doc)
 
     # 驗證密碼
-    if not verify_password(password, user.password_hash):
+    if not verify_password(login_data.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password"

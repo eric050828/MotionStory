@@ -84,11 +84,28 @@ class ApiService {
   }
 
   async login(email: string, password: string) {
-    const response = await this.client.post('/auth/login', { email, password });
-    if (response.data.access_token) {
-      await AsyncStorage.setItem('access_token', response.data.access_token);
+    try {
+      console.log('🚀 API Login - Sending request to:', `${API_BASE_URL}/auth/login`);
+      console.log('📝 Login data:', { email });
+
+      const response = await this.client.post('/auth/login', { email, password });
+
+      console.log('✅ Login response:', response.data);
+
+      if (response.data.access_token) {
+        await AsyncStorage.setItem('access_token', response.data.access_token);
+      }
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Login error:', error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      throw error;
     }
-    return response.data;
   }
 
   async googleLogin(idToken: string) {
