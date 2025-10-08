@@ -104,6 +104,13 @@ async def register(
         }
 
     except ValueError as e:
+        # 回滾：刪除 Firebase 使用者
+        if 'firebase_user' in locals():
+            try:
+                await delete_firebase_user(firebase_user["uid"])
+            except:
+                pass
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
@@ -116,9 +123,14 @@ async def register(
             except:
                 pass
 
+        # 提供更詳細的錯誤訊息
+        error_detail = str(e)
+        if hasattr(e, '__class__'):
+            error_detail = f"{e.__class__.__name__}: {str(e)}"
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Registration failed: {str(e)}"
+            detail=f"Registration failed: {error_detail}"
         )
 
 

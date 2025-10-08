@@ -90,10 +90,10 @@ class DashboardService:
                 config={}
             ),
             Widget(
-                type="recent_achievements",
+                type="achievement_showcase",
                 position={"x": 4, "y": 2},
                 size={"width": 8, "height": 3},
-                config={"limit": 5}
+                config={}
             ),
         ]
 
