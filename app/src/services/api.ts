@@ -5,11 +5,18 @@
 
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+// For prebuild/native builds, use app.json extra.apiUrl
+// For Expo Go, use EXPO_PUBLIC_API_URL from .env
+const API_BASE_URL = 
+  Constants.expoConfig?.extra?.apiUrl || 
+  process.env.EXPO_PUBLIC_API_URL || 
+  'http://localhost:8000/api/v1';
 
 console.log('🔧 API Configuration:');
-console.log('  - EXPO_PUBLIC_API_URL:', process.env.EXPO_PUBLIC_API_URL);
+console.log('  - Constants.expoConfig?.extra?.apiUrl:', Constants.expoConfig?.extra?.apiUrl);
+console.log('  - process.env.EXPO_PUBLIC_API_URL:', process.env.EXPO_PUBLIC_API_URL);
 console.log('  - Using API_BASE_URL:', API_BASE_URL);
 
 class ApiService {
