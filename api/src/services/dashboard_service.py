@@ -71,27 +71,35 @@ class DashboardService:
         default_widgets = [
             Widget(
                 type="streak_counter",
+                title="連續天數",
                 position={"x": 0, "y": 0},
                 size={"width": 6, "height": 2},
-                config={}
+                config={},
+                visible=True
             ),
             Widget(
                 type="weekly_stats",
+                title="本週統計",
                 position={"x": 6, "y": 0},
                 size={"width": 6, "height": 2},
-                config={}
+                config={},
+                visible=True
             ),
             Widget(
                 type="monthly_distance",
+                title="月度距離",
                 position={"x": 0, "y": 2},
                 size={"width": 4, "height": 3},
-                config={}
+                config={},
+                visible=True
             ),
             Widget(
                 type="achievement_showcase",
+                title="成就展示",
                 position={"x": 4, "y": 2},
                 size={"width": 8, "height": 3},
-                config={}
+                config={},
+                visible=True
             ),
         ]
 

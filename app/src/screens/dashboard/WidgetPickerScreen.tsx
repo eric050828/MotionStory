@@ -65,14 +65,14 @@ const WidgetPickerScreen: React.FC = () => {
     if (!selectedWidget || !currentDashboard) return;
 
     const template = WIDGET_TEMPLATES[selectedWidget];
-    const nextRow = Math.max(...currentDashboard.widgets.map((w) => w.position.row + w.dimensions.height), 0);
+    const nextY = Math.max(...currentDashboard.widgets.map((w) => w.position.y + w.size.height), 0);
 
     try {
       await addWidget(currentDashboard.id, {
         type: selectedWidget,
         title: template.default_title,
-        position: { row: nextRow, col: 0 },
-        dimensions: template.default_dimensions,
+        position: { x: 0, y: nextY },
+        size: template.default_dimensions,
         config: {},
       });
 

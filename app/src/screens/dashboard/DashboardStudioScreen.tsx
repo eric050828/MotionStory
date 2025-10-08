@@ -103,7 +103,14 @@ const DashboardStudioScreen: React.FC = () => {
               disabled={!editMode}
             >
               <View style={styles.widgetHeader}>
-                <Text style={styles.widgetTitle}>{widget.title}</Text>
+                <View style={styles.widgetTitleRow}>
+                  <Text style={styles.widgetTitle}>{widget.title}</Text>
+                  {!widget.visible && (
+                    <View style={styles.hiddenBadgeInline}>
+                      <Text style={styles.hiddenTextInline}>隱藏</Text>
+                    </View>
+                  )}
+                </View>
                 {editMode && (
                   <TouchableOpacity style={styles.widgetSettings}>
                     <Text>⚙️</Text>
@@ -119,12 +126,6 @@ const DashboardStudioScreen: React.FC = () => {
                   {widget.size.width}x{widget.size.height}
                 </Text>
               </View>
-
-              {!widget.visible && (
-                <View style={styles.hiddenBadge}>
-                  <Text style={styles.hiddenText}>隱藏</Text>
-                </View>
-              )}
             </TouchableOpacity>
           ))}
 
@@ -223,6 +224,22 @@ const styles = StyleSheet.create({
   widgetSettings: {
     padding: 4,
   },
+  widgetTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  hiddenBadgeInline: {
+    backgroundColor: '#FF9800',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  hiddenTextInline: {
+    fontSize: 9,
+    color: '#fff',
+    fontWeight: '600',
+  },
   widgetContent: {
     flex: 1,
     justifyContent: 'center',
@@ -237,20 +254,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#ccc',
   },
-  hiddenBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: '#FF9800',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  hiddenText: {
-    fontSize: 10,
-    color: '#fff',
-    fontWeight: '600',
-  },
+
   addWidgetButton: {
     width: '48%',
     height: 120,
