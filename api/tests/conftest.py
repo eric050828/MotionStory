@@ -3,6 +3,13 @@ Pytest Configuration & Fixtures
 提供測試所需的共用 fixtures
 """
 
+import sys
+from pathlib import Path
+
+# 添加 api 目錄到 Python 路徑
+api_dir = Path(__file__).parent.parent
+sys.path.insert(0, str(api_dir))
+
 import pytest
 import asyncio
 from httpx import AsyncClient
