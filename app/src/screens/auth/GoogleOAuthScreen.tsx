@@ -1,6 +1,9 @@
 /**
  * T147: GoogleOAuthScreen
  * Google OAuth 登入介面
+ * 
+ * Note: This screen has been modified to handle web compatibility.
+ * Google Sign-In is a native-only feature and will be disabled on the web.
  */
 
 import React, { useEffect, useState } from 'react';
@@ -10,13 +13,22 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
-  Image,
+  Platform, // Import Platform to check the OS
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
-import auth from '@react-native-firebase/auth';
 import { useAuthStore } from '../../store/useAuthStore';
 import { Button } from '../../components/Button';
+
+// Conditionally import native-only modules
+let GoogleSignin: any, statusCodes: any, auth: any;
+if (Platform.OS !== 'web') {
+  try {
+    ({ GoogleSignin, statusCodes } = require('@react-native-google-signin/google-signin'));
+    auth = require('@react-native-firebase/auth').default;
+  } catch (e) {
+    console.error("Failed to load native Google Sign-In modules", e);
+  }
+}
 
 const GoogleOAuthScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -24,39 +36,47 @@ const GoogleOAuthScreen: React.FC = () => {
   const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
-    // 配置 Google Sign-In
-    GoogleSignin.configure({
-      webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-      offlineAccess: true,
-    });
+    if (Platform.OS !== 'web' && GoogleSignin) {
+      // Configure Google Sign-In for native platforms
+      GoogleSignin.configure({
+        webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+        offlineAccess: true,
+      });
+    }
     setInitializing(false);
   }, []);
 
   const handleGoogleSignIn = async () => {
+    // On web, this button should ideally not be pressable, but as a fallback:
+    if (Platform.OS === 'web' || !GoogleSignin) {
+      Alert.alert('不支援的功能', '網頁版目前不支援 Google 登入。');
+      return;
+    }
+
     try {
-      // 檢查 Google Play Services
+      // Check Google Play Services
       await GoogleSignin.hasPlayServices({
         showPlayServicesUpdateDialog: true,
       });
 
-      // 取得使用者資訊
-      const userInfo = await GoogleSignin.signIn();
+      // Get user info
+      await GoogleSignin.signIn();
 
-      // 取得 ID Token
+      // Get ID Token
       const { idToken } = await GoogleSignin.getTokens();
 
       if (!idToken) {
         throw new Error('未能取得 Google ID Token');
       }
 
-      // 使用 Firebase 認證
+      // Authenticate with Firebase
       const googleCredential = auth.GoogleAuthProvider.credential(idToken);
       await auth().signInWithCredential(googleCredential);
 
-      // 呼叫後端 API 完成登入
+      // Call backend API to complete login
       await googleLogin(idToken);
 
-      // 成功後會自動導航到主畫面 (由 RootNavigator 處理)
+      // Navigation will be handled by RootNavigator on success
     } catch (error: any) {
       handleSignInError(error);
     }
@@ -64,16 +84,12 @@ const GoogleOAuthScreen: React.FC = () => {
 
   const handleSignInError = (error: any) => {
     if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-      // 使用者取消登入
       console.log('User cancelled the login flow');
     } else if (error.code === statusCodes.IN_PROGRESS) {
-      // 登入進行中
       Alert.alert('提示', '登入進行中，請稍候');
     } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-      // Play services 不可用
       Alert.alert('錯誤', 'Google Play Services 不可用');
     } else {
-      // 其他錯誤
       Alert.alert('登入失敗', error.message || '請稍後再試');
       console.error('Google Sign-In Error:', error);
     }
@@ -83,7 +99,7 @@ const GoogleOAuthScreen: React.FC = () => {
     navigation.goBack();
   };
 
-  if (initializing) {
+  if (initializing && Platform.OS !== 'web') {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#4285F4" />
@@ -92,6 +108,35 @@ const GoogleOAuthScreen: React.FC = () => {
     );
   }
 
+  // Render a web-specific view
+  if (Platform.OS === 'web') {
+    return (
+      <View style={styles.container}>
+        <View style={styles.content}>
+          <View style={styles.header}>
+            <Text style={styles.googleIcon}>G</Text>
+            <Text style={styles.title}>Google 登入</Text>
+            <Text style={styles.subtitle}>此功能目前僅支援手機 App</Text>
+          </View>
+          <View style={styles.buttonContainer}>
+            <Button
+              title="返回"
+              onPress={handleBackToLogin}
+              variant="outline"
+              style={styles.backButton}
+            />
+          </View>
+          <View style={styles.infoContainer}>
+            <Text style={styles.infoText}>
+              請下載我們的 Android 或 iOS 應用程式以使用 Google 登入。
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  // Render the native view
   return (
     <View style={styles.container}>
       <View style={styles.content}>
