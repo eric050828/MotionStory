@@ -1,292 +1,404 @@
-/**
- * T152: DashboardStudioScreen
- * 儀表板編輯工作室
- */
-
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
+import { Alert, Dimensions } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
-  View,
-  Text,
-  StyleSheet,
+  YStack,
+  XStack,
   ScrollView,
-  TouchableOpacity,
-  Alert,
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import useDashboardStore from '../../store/dashboardStore';
-import { Widget } from '../../types/dashboard';
-import { Loading } from '../../components/ui/Loading';
-import { Button } from '../../components/Button';
+  H2,
+  Paragraph,
+  Button,
+  Card,
+  Spinner,
+  AnimatePresence,
+  Text,
+  useTheme,
+} from "tamagui";
+import { Plus, Settings, LayoutGrid, Sparkles } from "@tamagui/lucide-icons";
+import useDashboardStore from "../../store/dashboardStore";
+import { Widget } from "../../types/dashboard";
+import { LinearGradient } from "tamagui/linear-gradient";
+import { Motion } from "@legendapp/motion";
+
+export type RootStackParamList = {
+  Home: undefined;
+  Profile: undefined;
+  DragDropEditor: { widgetId: string };
+  WidgetPicker: undefined;
+};
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
+const { width } = Dimensions.get("window");
+
+const widgetGradients: Record<string, string[]> = {
+  CHART: ["#00C9A7", "#00D9C0"],
+  TABLE: ["#FFB800", "#FFD60A"],
+  KPI: ["#FF6B6B", "#FF8E8E"],
+  GAUGE: ["#4DABF7", "#74C0FC"],
+  MAP: ["#9775FA", "#B197FC"],
+  TEXT: ["#868E96", "#ADB5BD"],
+  DEFAULT: ["#495057", "#6C757D"],
+};
+
+// 將陣列拆成每 row n 個
+function chunkArray<T>(arr: T[], size: number): T[][] {
+  const result: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) {
+    result.push(arr.slice(i, i + size));
+  }
+  return result;
+}
 
 const DashboardStudioScreen: React.FC = () => {
-  const navigation = useNavigation();
-  const {
-    currentDashboard,
-    loading,
-    isDragging,
-    fetchDefaultDashboard,
-    updateDashboard,
-  } = useDashboardStore();
+  const navigation = useNavigation<NavigationProp>();
+  const theme = useTheme();
+  const { currentDashboard, loading, fetchDefaultDashboard, updateDashboard } =
+    useDashboardStore();
 
   const [editMode, setEditMode] = useState(false);
 
   useEffect(() => {
     fetchDefaultDashboard();
-  }, []);
+  }, [fetchDefaultDashboard]);
 
-  const handleAddWidget = () => {
-    navigation.navigate('WidgetPicker' as never);
-  };
-
+  const handleAddWidget = () => navigation.navigate("WidgetPicker" as never);
   const handleEditWidget = (widget: Widget) => {
-    navigation.navigate('DragDropEditor' as never, { widgetId: widget.id } as never);
+    navigation.navigate("DragDropEditor", { widgetId: widget.id });
   };
 
   const handleSave = async () => {
     if (!currentDashboard) return;
-
     try {
       await updateDashboard(currentDashboard.id, {
         widgets: currentDashboard.widgets,
       });
-      Alert.alert('儲存成功', '儀表板配置已更新');
+      Alert.alert("儲存成功", "儀表板已更新完成！", [
+        { text: "太棒了", style: "default" },
+      ]);
       setEditMode(false);
     } catch (err) {
-      Alert.alert('儲存失敗', '請稍後再試');
+      Alert.alert("儲存失敗", "網路不穩，請再試一次");
     }
   };
 
   const handleToggleEditMode = () => {
-    if (editMode && currentDashboard) {
-      handleSave();
-    } else {
-      setEditMode(true);
-    }
+    if (editMode) handleSave();
+    else setEditMode(true);
   };
 
   if (loading || !currentDashboard) {
-    return <Loading />;
+    return (
+      <YStack flex={1} bg="$background" jc="center" ai="center">
+        <Spinner size="large" color="$blue10" />
+        <Paragraph mt="$4" color="$color10">
+          正在載入你的專屬儀表板...
+        </Paragraph>
+      </YStack>
+    );
   }
 
+  const hasWidgets = currentDashboard.widgets.length > 0;
+
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>{currentDashboard.name}</Text>
-          <Text style={styles.subtitle}>
-            {editMode ? '編輯模式' : '預覽模式'}
-          </Text>
-        </View>
-        <Button
-          title={editMode ? '儲存' : '編輯'}
-          onPress={handleToggleEditMode}
-          size="small"
-        />
-      </View>
+    <YStack flex={1} bg="$background">
+      {/* 毛玻璃 Header */}
+      <LinearGradient
+        position="absolute"
+        top={0}
+        left={0}
+        right={0}
+        height={180}
+        colors={["$blue10", "$blue9"]}
+        opacity={0.12}
+        zIndex={-1}
+      />
+      <XStack
+        bg="transparent"
+        backdropFilter="blur(20px)"
+        borderBottomWidth={1}
+        borderColor="$borderColor"
+        px="$4"
+        py="$5"
+        ai="center"
+        jc="space-between"
+        shadowColor="$shadowColor"
+        shadowOpacity={0.1}
+        shadowRadius={20}
+        shadowOffset={{ width: 0, height: 4 }}
+      >
+        <YStack>
+          <H2 color="$color12" fontWeight="800">
+            {currentDashboard.name}
+          </H2>
+          <XStack ai="center" gap="$2" mt="$1">
+            <Text color={editMode ? "$green10" : "$blue10"} fontSize="$4">
+              {editMode ? "編輯模式中" : "預覽模式"}
+            </Text>
+            {editMode && <Sparkles size={16} color="$green10" />}
+          </XStack>
+        </YStack>
 
-      {/* Dashboard Preview */}
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.grid}>
-          {currentDashboard.widgets.map((widget) => (
-            <TouchableOpacity
-              key={widget.id}
-              style={[
-                styles.widgetPreview,
-                {
-                  width: `${(widget.size.width / 12) * 100}%`,
-                  height: widget.size.height * 60,
-                },
-                editMode && styles.widgetPreviewEdit,
-              ]}
-              onPress={() => editMode && handleEditWidget(widget)}
-              disabled={!editMode}
-            >
-              <View style={styles.widgetHeader}>
-                <View style={styles.widgetTitleRow}>
-                  <Text style={styles.widgetTitle}>{widget.title}</Text>
-                  {!widget.visible && (
-                    <View style={styles.hiddenBadgeInline}>
-                      <Text style={styles.hiddenTextInline}>隱藏</Text>
-                    </View>
-                  )}
-                </View>
-                {editMode && (
-                  <TouchableOpacity style={styles.widgetSettings}>
-                    <Text>⚙️</Text>
-                  </TouchableOpacity>
+        <Motion.View
+          animate={{ scale: editMode ? 1.1 : 1 }}
+          transition={{ type: "spring", stiffness: 400, damping: 17 }}
+        >
+          <Button
+            onPress={handleToggleEditMode}
+            size="$4"
+            theme={editMode ? "green" : "blue"}
+            fontWeight="600"
+            iconAfter={editMode ? undefined : <Settings size={18} />}
+          >
+            {editMode ? "完成儲存" : "編輯儀表板"}
+          </Button>
+        </Motion.View>
+      </XStack>
+
+      {/* 主內容區 */}
+      <ScrollView
+        contentContainerStyle={{
+          padding: 16,
+          paddingBottom: editMode ? 180 : 40,
+        }}
+      >
+        {hasWidgets ? (
+          <YStack gap="$4">
+            {chunkArray(currentDashboard.widgets, 2).map((row, rowIndex) => (
+              <XStack key={rowIndex} gap="$4">
+                {row.map((widget) => {
+                  const gradient =
+                    widgetGradients[widget.type.toUpperCase()] ||
+                    widgetGradients.DEFAULT;
+
+                  return (
+                    <Motion.View
+                      key={widget.id}
+                      initial={{ opacity: 0, y: 30 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                    >
+                      <Card
+                        flex={1}
+                        height={widget.size.height * 70 + 40}
+                        onPress={() => editMode && handleEditWidget(widget)}
+                        borderWidth={editMode ? 3 : 1}
+                        borderColor={editMode ? "$green9" : "$borderColor"}
+                        borderStyle={editMode ? "dashed" : "solid"}
+                        elevate
+                        overflow="hidden"
+                        hoverStyle={
+                          editMode ? { scale: 1.03, y: -4 } : { scale: 1.02 }
+                        }
+                        pressStyle={{ scale: 0.98 }}
+                        bg="$color2"
+                      >
+                        <LinearGradient
+                          position="absolute"
+                          top={0}
+                          left={0}
+                          right={0}
+                          bottom={0}
+                          colors={gradient}
+                          opacity={0.85}
+                        />
+                        <YStack p="$4" flex={1} zIndex={1}>
+                          <XStack jc="space-between" ai="center">
+                            <Paragraph
+                              color="white"
+                              fontWeight="700"
+                              fontSize="$6"
+                              textShadowColor="rgba(0,0,0.4)"
+                              textShadowOffset={{ width: 0, height: 1 }}
+                              textShadowRadius={4}
+                            >
+                              {widget.title}
+                            </Paragraph>
+                            {editMode && (
+                              <Motion.View whileTap={{ rotate: 90 }}>
+                                <Button
+                                  size="$2"
+                                  circular
+                                  icon={Settings}
+                                  bg="white"
+                                  opacity={0.9}
+                                />
+                              </Motion.View>
+                            )}
+                          </XStack>
+
+                          <YStack flex={1} jc="center" ai="center" gap="$2">
+                            <Paragraph
+                              color="white"
+                              fontWeight="500"
+                              opacity={0.9}
+                            >
+                              {widget.type.replace(/_/g, " ")}
+                            </Paragraph>
+                            <XStack
+                              bg="rgba(255,255,255,0.2)"
+                              px="$3"
+                              py="$1"
+                              borderRadius="$3"
+                              ai="center"
+                              gap="$1"
+                            >
+                              <LayoutGrid size={14} color="white" />
+                              <Text color="white" fontSize="$2">
+                                {widget.size.width} × {widget.size.height}
+                              </Text>
+                            </XStack>
+                          </YStack>
+
+                          {!widget.visible && (
+                            <XStack
+                              position="absolute"
+                              top={8}
+                              right={8}
+                              bg="$red9"
+                              px="$2"
+                              py="$1"
+                              borderRadius="$2"
+                              opacity={0.9}
+                            >
+                              <Text
+                                color="white"
+                                fontSize="$1"
+                                fontWeight="600"
+                              >
+                                已隱藏
+                              </Text>
+                            </XStack>
+                          )}
+                        </YStack>
+                      </Card>
+                    </Motion.View>
+                  );
+                })}
+
+                {/* 新增 Widget 按鈕 */}
+                {editMode && rowIndex === 0 && (
+                  <Motion.View
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    style={{ flex: 1 }}
+                  >
+                    <Card
+                      flex={1}
+                      height={180}
+                      bg="$color3"
+                      borderWidth={3}
+                      borderColor="$green9"
+                      borderStyle="dashed"
+                      jc="center"
+                      ai="center"
+                      gap="$3"
+                      onPress={handleAddWidget}
+                      hoverStyle={{ bg: "$green3" }}
+                    >
+                      <Motion.View
+                        animate={{ rotate: [0, 360] }}
+                        transition={{
+                          loop: Infinity,
+                          duration: 4000,
+                          ease: "linear",
+                        }}
+                      >
+                        <Plus size={36} color="$green10" />
+                      </Motion.View>
+                      <Paragraph
+                        fontSize="$6"
+                        fontWeight="700"
+                        color="$green11"
+                      >
+                        新增元件
+                      </Paragraph>
+                      <Paragraph fontSize="$3" color="$green10">
+                        點擊選擇你要的 Widget
+                      </Paragraph>
+                    </Card>
+                  </Motion.View>
                 )}
-              </View>
-
-              <View style={styles.widgetContent}>
-                <Text style={styles.widgetType}>
-                  {widget.type.replace(/_/g, ' ').toUpperCase()}
-                </Text>
-                <Text style={styles.widgetSize}>
-                  {widget.size.width}x{widget.size.height}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-
-          {/* Add Widget Button */}
-          {editMode && (
-            <TouchableOpacity
-              style={styles.addWidgetButton}
-              onPress={handleAddWidget}
+              </XStack>
+            ))}
+          </YStack>
+        ) : (
+          <YStack flex={1} jc="center" ai="center" px="$6" py="$20">
+            <Motion.View
+              animate={{ y: [0, -10, 0] }}
+              transition={{ repeat: Infinity, duration: 3 }}
             >
-              <Text style={styles.addWidgetIcon}>+</Text>
-              <Text style={styles.addWidgetText}>新增 Widget</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+              <Sparkles size={64} color="$blue9" opacity={0.6} />
+            </Motion.View>
+            <Paragraph fontSize="$8" fontWeight="700" color="$color11" mt="$6">
+              還沒有任何 Widget
+            </Paragraph>
+            <Paragraph color="$color9" textAlign="center" mt="$3">
+              {editMode
+                ? "開始打造屬於你的專屬儀表板吧！"
+                : "點擊右上角「編輯」按鈕開始新增"}
+            </Paragraph>
+            {editMode && (
+              <Button
+                size="$5"
+                theme="green"
+                mt="$8"
+                onPress={handleAddWidget}
+                icon={<Plus />}
+              >
+                新增第一個 Widget
+              </Button>
+            )}
+          </YStack>
+        )}
       </ScrollView>
 
-      {/* Edit Mode Actions */}
-      {editMode && (
-        <View style={styles.actions}>
-          <Button
-            title="Widget 庫"
-            onPress={handleAddWidget}
-            variant="outline"
-            style={styles.actionButton}
-          />
-          <Button
-            title="佈局編輯器"
-            onPress={() => navigation.navigate('DragDropEditor' as never)}
-            variant="outline"
-            style={styles.actionButton}
-          />
-        </View>
-      )}
-    </View>
+      {/* 底部編輯工具列 */}
+      <AnimatePresence>
+        {editMode && (
+          <Motion.View
+            initial={{ y: 100 }}
+            animate={{ y: 0 }}
+            exit={{ y: 100 }}
+            transition={{ type: "spring" }}
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              padding: 20,
+              paddingBottom: 40,
+              backgroundColor: theme.background.val,
+              borderTopWidth: 1,
+              borderColor: theme.borderColor.val,
+            }}
+          >
+            <XStack gap="$4">
+              <Button
+                flex={1}
+                icon={<Plus />}
+                theme="green"
+                size="$4"
+                onPress={handleAddWidget}
+              >
+                Widget 庫
+              </Button>
+              <Button
+                flex={1}
+                icon={<LayoutGrid />}
+                theme="blue"
+                size="$4"
+                onPress={() => navigation.navigate("DragDropEditor" as never)}
+              >
+                自由佈局模式
+              </Button>
+            </XStack>
+          </Motion.View>
+        )}
+      </AnimatePresence>
+    </YStack>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#333',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 2,
-  },
-  content: {
-    padding: 16,
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  widgetPreview: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  widgetPreviewEdit: {
-    borderWidth: 2,
-    borderColor: '#2196F3',
-    borderStyle: 'dashed',
-  },
-  widgetHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  widgetTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-  },
-  widgetSettings: {
-    padding: 4,
-  },
-  widgetTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  hiddenBadgeInline: {
-    backgroundColor: '#FF9800',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  hiddenTextInline: {
-    fontSize: 9,
-    color: '#fff',
-    fontWeight: '600',
-  },
-  widgetContent: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  widgetType: {
-    fontSize: 12,
-    color: '#999',
-    marginBottom: 4,
-  },
-  widgetSize: {
-    fontSize: 10,
-    color: '#ccc',
-  },
-
-  addWidgetButton: {
-    width: '48%',
-    height: 120,
-    backgroundColor: '#E3F2FD',
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#2196F3',
-    borderStyle: 'dashed',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  addWidgetIcon: {
-    fontSize: 32,
-    color: '#2196F3',
-    marginBottom: 8,
-  },
-  addWidgetText: {
-    fontSize: 14,
-    color: '#2196F3',
-    fontWeight: '600',
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: 12,
-    padding: 16,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-  },
-  actionButton: {
-    flex: 1,
-  },
-});
 
 export default DashboardStudioScreen;
