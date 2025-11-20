@@ -3,18 +3,21 @@
  * Traditional React Navigation setup with Tamagui
  */
 
-import React, { useEffect } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import React from 'react';
+import { NavigationContainer, DarkTheme, DefaultTheme } from '@react-navigation/native';
+import { useColorScheme } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
-import { TamaguiProvider, Text, View } from 'tamagui';
+import { TamaguiProvider, Theme, Text, View } from 'tamagui';
 import RootNavigator from './src/navigation/RootNavigator';
 
 // Import the local Tamagui config
 import config from './tamagui.config';
 
 export default function App() {
+  const colorScheme = useColorScheme();
+
   // Load necessary fonts for Tamagui
   const [loaded, error] = useFonts({
     Inter: require('@tamagui/font-inter/otf/Inter-Medium.otf'),
@@ -23,26 +26,29 @@ export default function App() {
 
   // Handle font loading state
   if (error) {
-    // You can render a more specific error message here
     return (
       <View flex={1} justifyContent="center" alignItems="center">
-        <Text>Error loading fonts.</Text>
+        <Text>Error loading fonts: {error.message}</Text>
       </View>
-    )
+    );
   }
 
   if (!loaded) {
-    // Returning null or a loading indicator while fonts are loading
-    return null;
+    return null; // Or a custom loading component
   }
 
   return (
     <SafeAreaProvider>
-      <TamaguiProvider config={config} defaultTheme="light">
-        <NavigationContainer>
-          <StatusBar style="auto" />
-          <RootNavigator />
-        </NavigationContainer>
+      <TamaguiProvider
+        config={config}
+        defaultTheme={colorScheme === 'dark' ? 'dark_brand' : 'light_brand'}
+      >
+        <Theme name={colorScheme === 'dark' ? 'dark_brand' : 'light_brand'}>
+          <NavigationContainer theme={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+            <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+            <RootNavigator />
+          </NavigationContainer>
+        </Theme>
       </TamaguiProvider>
     </SafeAreaProvider>
   );

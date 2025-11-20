@@ -1,35 +1,28 @@
 import React, { useState } from "react";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-  // 注意：我們移除了 React Native 的 View, Text, StyleSheet, ScrollView
-  // 改用 Tamagui 的版本
-} from "react-native";
+import { KeyboardAvoidingView, Platform, Alert } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import {
   YStack,
   XStack,
-  H2,
+  H3,
   Paragraph,
   Input,
   Button,
-  Text,
   Label,
   ScrollView,
   Separator,
-  Theme,
   Spinner,
+  Card,
+  H2,
 } from "tamagui";
-
 import { useAuthStore } from "../store/useAuthStore";
 import { extractErrorMessage } from "../utils/errorHandler";
+import { Lock, Mail } from "@tamagui/lucide-icons";
 
-// 為了方便，我們定義一個簡單的錯誤訊息組件
-const ErrorText = ({ children }: { children: string }) => (
-  <Text color="$red10" fontSize="$2" mt="$1" ml="$1">
+const ErrorText = ({ children }: { children: React.ReactNode }) => (
+  <Paragraph color="$red10" size="$2" mt="$1">
     {children}
-  </Text>
+  </Paragraph>
 );
 
 export const LoginScreen: React.FC = () => {
@@ -41,14 +34,13 @@ export const LoginScreen: React.FC = () => {
 
   const { login, isLoading } = useAuthStore();
 
-  // ... 驗證邏輯保持不變 ...
-  const validateEmail = (email: string): boolean => {
+  const validateEmail = (text: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email) {
+    if (!text) {
       setEmailError("Email 為必填欄位");
       return false;
     }
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(text)) {
       setEmailError("Email 格式不正確");
       return false;
     }
@@ -56,13 +48,13 @@ export const LoginScreen: React.FC = () => {
     return true;
   };
 
-  const validatePassword = (password: string): boolean => {
-    if (!password) {
+  const validatePassword = (text: string): boolean => {
+    if (!text) {
       setPasswordError("密碼為必填欄位");
       return false;
     }
-    if (password.length < 8) {
-      setPasswordError("密碼至少需要 8 個字元");
+    if (text.length < 6) {
+      setPasswordError("密碼至少需要 6 個字元");
       return false;
     }
     setPasswordError("");
@@ -70,7 +62,10 @@ export const LoginScreen: React.FC = () => {
   };
 
   const handleLogin = async () => {
-    if (!validateEmail(email) || !validatePassword(password)) return;
+    const isEmailValid = validateEmail(email);
+    const isPasswordValid = validatePassword(password);
+    if (!isEmailValid || !isPasswordValid) return;
+
     try {
       await login(email, password);
     } catch (error: any) {
@@ -78,123 +73,152 @@ export const LoginScreen: React.FC = () => {
     }
   };
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = () => {
     Alert.alert("開發中", "Google 登入功能開發中");
   };
 
   return (
-    // 1. 使用 Theme 包裹可以確保內部組件使用特定主題色 (可選)
-    <Theme name="light">
+    <YStack
+      flex={1}
+      backgroundColor="$background"
+      justifyContent="center"
+      padding="$4"
+    >
       <KeyboardAvoidingView
-        style={{ flex: 1 }} // RN 原生組件還是可以用 style，或者包一層 YStack
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <ScrollView
-          contentContainerStyle={{ flexGrow: 1 }}
-          keyboardShouldPersistTaps="handled"
-          backgroundColor="$background" // 使用 Tamagui token
+          contentContainerStyle={{ justifyContent: "center", flexGrow: 1 }}
         >
-          {/* 2. 主容器：垂直堆疊，置中，padding */}
-          <YStack f={1} jc="center" p="$5" space="$4">
-            {/* Header */}
-            <YStack ai="center" mb="$6">
-              <H2 color="$blue10" fontWeight="bold" mb="$2">
-                MotionStory
-              </H2>
-              <Paragraph color="$gray10" size="$4">
-                運動追蹤與動機平台
-              </Paragraph>
-            </YStack>
+          <Card
+            elevate
+            bordered
+            padding="$5"
+            animation="bouncy"
+            enterStyle={{ o: 0, y: -10 }}
+          >
+            <Card.Header>
+              <YStack alignItems="center" space="$2" marginBottom="$4">
+                <XStack>
+                  <H2 color="$brand" fontWeight="bold">Motion</H2>
+                  <H2>Story</H2>
+                </XStack>
+                <Paragraph theme="alt2">
+                  Sign in to your account
+                </Paragraph>
+              </YStack>
+            </Card.Header>
 
-            {/* Form */}
-            <YStack space="$4" w="100%">
-              {/* Email Input */}
+            <YStack space="$4" marginTop="$4">
               <YStack>
-                <Label htmlFor="email" mb="$1">
-                  Email
-                </Label>
-                <Input
-                  id="email"
-                  value={email}
-                  onChangeText={(t) => {
-                    setEmail(t);
-                    setEmailError("");
-                  }}
-                  placeholder="請輸入 Email"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  borderColor={emailError ? "$red9" : "$borderColor"}
-                  focusStyle={{ borderColor: "$blue10" }} // Focus 時變色
-                  size="$4"
-                />
+                <Label htmlFor="email">Email</Label>
+                <XStack
+                  alignItems="center"
+                  space="$3"
+                  borderWidth={1}
+                  borderColor="$borderColor"
+                  borderRadius="$4"
+                  paddingHorizontal="$3"
+                  focusStyle={{ borderColor: "$brand" }}
+                >
+                  <Mail color="$color7" />
+                  <Input
+                    flex={1}
+                    id="email"
+                    value={email}
+                    onChangeText={(text) => {
+                      setEmail(text);
+                      if (emailError) validateEmail(text);
+                    }}
+                    onBlur={() => validateEmail(email)}
+                    placeholder="name@example.com"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    borderWidth={0}
+                    backgroundColor="transparent"
+                    focusStyle={{ backgroundColor: "transparent" }}
+                  />
+                </XStack>
                 {!!emailError && <ErrorText>{emailError}</ErrorText>}
               </YStack>
 
-              {/* Password Input */}
               <YStack>
-                <Label htmlFor="password" mb="$1">
-                  密碼
-                </Label>
-                <Input
-                  id="password"
-                  value={password}
-                  onChangeText={(t) => {
-                    setPassword(t);
-                    setPasswordError("");
-                  }}
-                  placeholder="請輸入密碼"
-                  secureTextEntry
-                  borderColor={passwordError ? "$red9" : "$borderColor"}
-                  focusStyle={{ borderColor: "$blue10" }}
-                  size="$4"
-                />
+                <Label htmlFor="password">Password</Label>
+                <XStack
+                  alignItems="center"
+                  space="$3"
+                  borderWidth={1}
+                  borderColor="$borderColor"
+                  borderRadius="$4"
+                  paddingHorizontal="$3"
+                  focusStyle={{ borderColor: "$brand" }}
+                >
+                  <Lock color="$color7" />
+                  <Input
+                    flex={1}
+                    id="password"
+                    value={password}
+                    onChangeText={(text) => {
+                      setPassword(text);
+                      if (passwordError) validatePassword(text);
+                    }}
+                    onBlur={() => validatePassword(password)}
+                    placeholder="••••••••"
+                    secureTextEntry
+                    borderWidth={0}
+                    backgroundColor="transparent"
+                    focusStyle={{ backgroundColor: "transparent" }}
+                  />
+                </XStack>
                 {!!passwordError && <ErrorText>{passwordError}</ErrorText>}
               </YStack>
 
-              {/* Login Button */}
-              {/* theme="active" 會讓按鈕使用主色調 (通常是藍色) */}
               <Button
-                theme="active"
+                backgroundColor="$brand"
+                color="$background"
+                pressStyle={{ backgroundColor: "$brandHover" }}
                 size="$4"
                 onPress={handleLogin}
                 disabled={isLoading}
-                icon={isLoading ? <Spinner color="$color" /> : undefined}
-                mt="$2"
+                icon={isLoading ? <Spinner /> : undefined}
+                marginTop="$2"
               >
-                登入
+                Sign In
               </Button>
 
-              {/* Divider */}
-              <XStack ai="center" my="$4">
-                <Separator />
-                <Separator />
+              <XStack alignItems="center" space>
+                <Separator flex={1} />
+                <Paragraph size="$2" theme="alt2">
+                  OR
+                </Paragraph>
+                <Separator flex={1} />
               </XStack>
 
-              {/* Google Login Button */}
               <Button
                 variant="outlined"
                 size="$4"
                 onPress={handleGoogleLogin}
                 disabled={isLoading}
+                // icon={<GoogleIcon />} // You can add a custom Google icon component here
               >
-                使用 Google 登入
-              </Button>
-
-              {/* Register Button */}
-              {/* chromeless 類似 variant="secondary" 或 text button */}
-              <Button
-                chromeless
-                size="$3"
-                mt="$2"
-                onPress={() => navigation.navigate("Register" as never)}
-                color="$gray10"
-              >
-                還沒有帳號？立即註冊
+                Sign In with Google
               </Button>
             </YStack>
-          </YStack>
+
+            <Card.Footer marginTop="$4">
+              <Paragraph size="$2" theme="alt2">
+                Don't have an account?{" "}
+              </Paragraph>
+              <Button
+                size="$2"
+                onPress={() => navigation.navigate("Register" as never)}
+              >
+                Sign Up
+              </Button>
+            </Card.Footer>
+          </Card>
         </ScrollView>
       </KeyboardAvoidingView>
-    </Theme>
+    </YStack>
   );
 };
