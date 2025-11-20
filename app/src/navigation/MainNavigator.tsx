@@ -31,9 +31,11 @@ import TimelineScreen from "../screens/timeline/TimelineScreen";
 // Profile Stack
 import SettingsScreen from "../screens/profile/SettingsScreen";
 
+import { WorkoutStackParamList } from "../types/navigation";
+
 const Tab = createBottomTabNavigator();
 const DashboardStack = createNativeStackNavigator();
-const WorkoutStack = createNativeStackNavigator();
+const WorkoutStack = createNativeStackNavigator<WorkoutStackParamList>();
 const TimelineStack = createNativeStackNavigator();
 const ProfileStack = createNativeStackNavigator();
 

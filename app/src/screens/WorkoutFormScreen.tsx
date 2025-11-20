@@ -1,232 +1,441 @@
 /**
  * Workout Form Screen
- * 運動記錄建立/編輯畫面
+ * 運動記錄建立/編輯畫面 (Refactored with Tamagui)
  */
-
-import React, { useState } from 'react';
+import React, { useState } from "react";
+import { Alert, Platform } from "react-native";
 import {
-  View,
-  Text,
-  StyleSheet,
+  YStack,
   ScrollView,
-  Alert,
-  Platform,
-} from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { Button } from '../components/Button';
-import { Input } from '../components/Input';
-import { Card } from '../components/Card';
-import { api } from '../services/api';
+  Button,
+  Input,
+  Text,
+  XStack,
+  H4,
+  useTheme,
+  ToggleGroup,
+  Spinner,
+} from "tamagui";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import {
+  Footprints,
+  Bike,
+  Waves,
+  Dumbbell,
+  Sparkles,
+  Clock,
+  HeartPulse,
+  Flame,
+  ClipboardPen,
+  Calendar,
+  Ruler,
+} from "@tamagui/lucide-icons";
+import { api } from "../services/api";
+import { WorkoutType } from "../types/workout";
 
-const WORKOUT_TYPES = [
-  { label: '跑步', value: 'running' },
-  { label: '騎車', value: 'cycling' },
-  { label: '游泳', value: 'swimming' },
-  { label: '健走', value: 'walking' },
-  { label: '重訓', value: 'weight_training' },
-  { label: '其他', value: 'other' },
+const WORKOUT_TYPES: Array<{
+  label: string;
+  value: WorkoutType;
+  icon: React.FC<any>;
+}> = [
+  { label: "跑步", value: "running", icon: Footprints },
+  { label: "騎車", value: "cycling", icon: Bike },
+  { label: "游泳", value: "swimming", icon: Waves },
+  { label: "重訓", value: "strength_training", icon: Dumbbell },
+  { label: "其他", value: "other", icon: Sparkles },
 ];
 
+// New component to simplify type inference for ToggleGroup - REMOVED
+
 export const WorkoutFormScreen: React.FC = () => {
-  const [workoutType, setWorkoutType] = useState('running');
+  const [workoutType, setWorkoutType] = useState<WorkoutType>("running");
+
   const [startTime, setStartTime] = useState(new Date());
-  const [duration, setDuration] = useState('');
-  const [distance, setDistance] = useState('');
-  const [avgHeartRate, setAvgHeartRate] = useState('');
-  const [calories, setCalories] = useState('');
-  const [notes, setNotes] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const [duration, setDuration] = useState("");
+
+  const [distance, setDistance] = useState("");
+
+  const [avgHeartRate, setAvgHeartRate] = useState("");
+
+  const [calories, setCalories] = useState("");
+
+  const [notes, setNotes] = useState("");
+
+    const [isLoading, setIsLoading] = useState(false);
+
+    const [showDatePicker, setShowDatePicker] = useState(false);
+
+    const [showTimePicker, setShowTimePicker] = useState(false);
+
+  
+
+    const theme = useTheme();
+
+  
+
+    const handleDateChange = (event: any, selectedDate?: Date) => {
+
+      setShowDatePicker(Platform.OS === 'ios');
+
+      if (selectedDate) {
+
+        const newStartTime = new Date(startTime);
+
+        newStartTime.setFullYear(selectedDate.getFullYear());
+
+        newStartTime.setMonth(selectedDate.getMonth());
+
+        newStartTime.setDate(selectedDate.getDate());
+
+        setStartTime(newStartTime);
+
+      }
+
+    };
+
+  
+
+    const handleTimeChange = (event: any, selectedTime?: Date) => {
+
+      setShowTimePicker(Platform.OS === 'ios');
+
+      if (selectedTime) {
+
+        const newStartTime = new Date(startTime);
+
+        newStartTime.setHours(selectedTime.getHours());
+
+        newStartTime.setMinutes(selectedTime.getMinutes());
+
+        setStartTime(newStartTime);
+
+      }
+
+    };
 
   const handleSubmit = async () => {
-    // Validation
     if (!duration) {
-      Alert.alert('錯誤', '請輸入運動時長');
+      Alert.alert("錯誤", "請輸入運動時長");
+
       return;
     }
 
     const durationNum = parseInt(duration);
-    if (durationNum <= 0 || durationNum > 1440) {
-      Alert.alert('錯誤', '運動時長需在 1-1440 分鐘之間');
+
+    if (isNaN(durationNum) || durationNum <= 0 || durationNum > 1440) {
+      Alert.alert("錯誤", "運動時長需為 1-1440 之間的有效數字");
+
       return;
     }
 
-    try {
-      setIsLoading(true);
+    setIsLoading(true);
 
+    try {
       const workoutData = {
         workout_type: workoutType,
+
         start_time: startTime.toISOString(),
+
         duration_minutes: durationNum,
+
         distance_km: distance ? parseFloat(distance) : undefined,
+
         avg_heart_rate: avgHeartRate ? parseInt(avgHeartRate) : undefined,
+
         calories: calories ? parseInt(calories) : undefined,
+
         notes: notes || undefined,
       };
 
       const response = await api.createWorkout(workoutData);
 
-      // Show achievements if triggered
       if (response.achievements_triggered?.length > 0) {
         const achievementTitles = response.achievements_triggered
-          .map((a: any) => a.metadata?.title || a.achievement_type)
-          .join(', ');
 
-        Alert.alert(
-          '🎉 成就達成！',
-          `恭喜你達成: ${achievementTitles}`,
-          [
-            {
-              text: '太棒了！',
-              onPress: () => {
-                // Navigate back or to achievements screen
-              },
-            },
-          ]
-        );
+          .map((a: any) => a.metadata?.title || a.achievement_type)
+
+          .join(", ");
+
+        Alert.alert("🎉 成就達成！", `恭喜你達成: ${achievementTitles}`);
       } else {
-        Alert.alert('成功', '運動記錄已儲存！', [
-          {
-            text: '確定',
-            onPress: () => {
-              // Navigate back
-            },
-          },
-        ]);
+        Alert.alert("成功", "運動記錄已儲存！");
       }
+
+      // TODO: Navigate back after success
     } catch (error: any) {
       Alert.alert(
-        '儲存失敗',
-        error.response?.data?.detail || '請稍後再試'
+        "儲存失敗",
+
+        error.response?.data?.detail || "請稍後再試"
       );
     } finally {
       setIsLoading(false);
     }
   };
 
-  return (
-    <ScrollView style={styles.container}>
-      <Card style={styles.card}>
-        <Text style={styles.sectionTitle}>運動類型</Text>
-        <View style={styles.typeContainer}>
-          {WORKOUT_TYPES.map((type) => (
-            <Button
-              key={type.value}
-              title={type.label}
-              onPress={() => setWorkoutType(type.value)}
-              variant={workoutType === type.value ? 'primary' : 'outline'}
-              size="small"
-              style={styles.typeButton}
-            />
-          ))}
-        </View>
-      </Card>
+  const renderInput = (
+    icon: React.ReactNode,
 
-      <Card style={styles.card}>
-        <Text style={styles.sectionTitle}>運動時間</Text>
-        <Button
-          title={startTime.toLocaleString('zh-TW')}
-          onPress={() => setShowDatePicker(true)}
-          variant="outline"
-        />
-        {showDatePicker && (
-          <DateTimePicker
-            value={startTime}
-            mode="datetime"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            onChange={(event, date) => {
-              setShowDatePicker(Platform.OS === 'ios');
-              if (date) setStartTime(date);
-            }}
-          />
-        )}
-      </Card>
+    label: string,
 
-      <Card style={styles.card}>
-        <Text style={styles.sectionTitle}>運動資料</Text>
+    value: string,
 
-        <Input
-          label="時長 (分鐘) *"
-          value={duration}
-          onChangeText={setDuration}
-          placeholder="30"
-          keyboardType="numeric"
-        />
+    onChangeText: (text: string) => void,
 
-        <Input
-          label="距離 (公里)"
-          value={distance}
-          onChangeText={setDistance}
-          placeholder="5.0"
-          keyboardType="decimal-pad"
-        />
+    placeholder: string,
 
-        <Input
-          label="平均心率"
-          value={avgHeartRate}
-          onChangeText={setAvgHeartRate}
-          placeholder="145"
-          keyboardType="numeric"
-        />
+    keyboardType: "numeric" | "decimal-pad" | "default" = "default"
+  ) => (
+    <XStack alignItems="center" space="$2">
+      <YStack p="$2" backgroundColor="$backgroundHover" borderRadius="$3">
+        {icon}
+      </YStack>
 
-        <Input
-          label="消耗卡路里"
-          value={calories}
-          onChangeText={setCalories}
-          placeholder="300"
-          keyboardType="numeric"
-        />
+      <Text width={80} color={theme.color.val}>
+        {label}
+      </Text>
 
-        <Input
-          label="備註"
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="今天狀態很好！"
-          multiline
-          numberOfLines={3}
-          style={styles.notesInput}
-        />
-      </Card>
-
-      <Button
-        title="儲存運動記錄"
-        onPress={handleSubmit}
-        loading={isLoading}
-        style={styles.submitButton}
+      <Input
+        flex={1}
+        size="$4"
+        placeholder={placeholder}
+        value={value}
+        onChangeText={onChangeText}
+        keyboardType={keyboardType}
+        borderWidth={1.5}
+        borderColor="$borderColor"
       />
+    </XStack>
+  );
+
+  return (
+    <ScrollView backgroundColor="$background">
+      <YStack space="$4" padding="$4">
+        {/* Workout Type Section */}
+
+        <YStack>
+          <H4 marginBottom="$3">運動類型</H4>
+          <XStack flexWrap="wrap" margin="$-1" alignItems="center">
+            {WORKOUT_TYPES.map((type) => {
+              const isActive = workoutType === type.value;
+              return (
+                <Button
+                  key={type.value}
+                  margin="$1"
+                  variant={isActive ? undefined : 'outlined'}
+                  theme={isActive ? 'brand' : 'gray'}
+                  onPress={() => setWorkoutType(type.value)}
+                  size="$3"
+                  paddingHorizontal="$3"
+                  icon={
+                    <type.icon
+                      size={16}
+                      color={isActive ? theme.brand.val : theme.color.val}
+                    />
+                  }
+                >
+                  <Text fontSize="$2" color={isActive ? '$brand' : '$color'}>
+                    {type.label}
+                  </Text>
+                </Button>
+              );
+            })}
+          </XStack>
+        </YStack>
+
+                {/* Workout Time Section */}
+
+                <YStack>
+
+                  <H4 marginBottom="$3">運動時間</H4>
+
+                  <XStack space="$2">
+
+                    <Button
+
+                      icon={<Calendar size={20} />}
+
+                      onPress={() => setShowDatePicker(true)}
+
+                      size="$4"
+
+                      justifyContent="flex-start"
+
+                      theme="gray"
+
+                      variant="outlined"
+
+                      flex={1}
+
+                    >
+
+                      {startTime.toLocaleDateString('zh-TW')}
+
+                    </Button>
+
+                    <Button
+
+                      icon={<Clock size={20} />}
+
+                      onPress={() => setShowTimePicker(true)}
+
+                      size="$4"
+
+                      justifyContent="flex-start"
+
+                      theme="gray"
+
+                      variant="outlined"
+
+                      flex={1}
+
+                    >
+
+                      {startTime.toLocaleTimeString('zh-TW', {
+
+                        hour: '2-digit',
+
+                        minute: '2-digit',
+
+                      })}
+
+                    </Button>
+
+                  </XStack>
+
+                  {showDatePicker && (
+
+                    <DateTimePicker
+
+                      value={startTime}
+
+                      mode="date"
+
+                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+
+                      onChange={handleDateChange}
+
+                    />
+
+                  )}
+
+                  {showTimePicker && (
+
+                    <DateTimePicker
+
+                      value={startTime}
+
+                      mode="time"
+
+                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+
+                      onChange={handleTimeChange}
+
+                    />
+
+                  )}
+
+                </YStack>
+
+        {/* Workout Data Section */}
+
+        <YStack space="$3">
+          <H4 marginBottom="$2">運動資料</H4>
+
+          {renderInput(
+            <Clock size={20} color={theme.color.val} />,
+
+            "時長 (分) *",
+
+            duration,
+
+            setDuration,
+
+            "例如: 30",
+
+            "numeric"
+          )}
+
+          {renderInput(
+            <Ruler size={20} color={theme.color.val} />,
+
+            "距離 (km)",
+
+            distance,
+
+            setDistance,
+
+            "例如: 5.0",
+
+            "decimal-pad"
+          )}
+
+          {renderInput(
+            <HeartPulse size={20} color={theme.color.val} />,
+
+            "平均心率",
+
+            avgHeartRate,
+
+            setAvgHeartRate,
+
+            "例如: 145",
+
+            "numeric"
+          )}
+
+          {renderInput(
+            <Flame size={20} color={theme.color.val} />,
+
+            "卡路里",
+
+            calories,
+
+            setCalories,
+
+            "例如: 300",
+
+            "numeric"
+          )}
+
+          <YStack
+            backgroundColor="$backgroundHover"
+            borderRadius="$3"
+            padding="$3"
+            space="$2"
+          >
+            <XStack space="$2" alignItems="center">
+              <ClipboardPen size={20} color={theme.color.val} />
+
+              <Text color={theme.color.val}>備註</Text>
+            </XStack>
+
+            <Input
+              multiline
+              numberOfLines={4}
+              placeholder="今天狀態很好！"
+              value={notes}
+              onChangeText={setNotes}
+              borderWidth={0}
+              backgroundColor="$backgroundHover"
+            />
+          </YStack>
+        </YStack>
+
+        {/* Submit Button */}
+
+        <Button
+          size="$5"
+          onPress={handleSubmit}
+          disabled={isLoading}
+          icon={isLoading ? <Spinner /> : undefined}
+          pressStyle={{ scale: 0.97, opacity: 0.9 }}
+          animation="bouncy"
+        >
+          {isLoading ? "儲存中..." : "儲存運動記錄"}
+        </Button>
+      </YStack>
     </ScrollView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-  },
-  card: {
-    margin: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 16,
-    color: '#333',
-  },
-  typeContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  typeButton: {
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  notesInput: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  submitButton: {
-    margin: 16,
-    marginTop: 8,
-  },
-});

@@ -1,48 +1,71 @@
 /**
  * T149: WorkoutListScreen
- * 運動記錄列表畫面
+ * 運動記錄列表畫面 (Refactored with Tamagui)
  */
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from "react";
+import { Alert, RefreshControl } from "react-native";
 import {
-  View,
+  YStack,
   Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  RefreshControl,
-  Alert,
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import useWorkoutStore from '../../store/workoutStore';
-import { Workout, WorkoutType } from '../../types/workout';
-import { Loading } from '../../components/ui/Loading';
-import { Button } from '../../components/Button';
+  Button,
+  XStack,
+  ScrollView,
+  useTheme,
+  H4,
+  Paragraph,
+} from "tamagui";
+import { useNavigation, NavigationProp } from "@react-navigation/native";
+import {
+  Plus,
+  ListFilter,
+  Footprints,
+  Bike,
+  Waves,
+  Mountain,
+  PersonStanding,
+  Dumbbell,
+  Sparkles,
+  ClipboardList, // Added for empty state icon
+  Pencil, // Added for add button icon
+} from "@tamagui/lucide-icons";
+import useWorkoutStore from "../../store/workoutStore";
+import { Workout, WorkoutType } from "../../types/workout";
+import { Loading } from "../../components/ui/Loading";
+import { WorkoutStackParamList } from "../../types/navigation";
+import { LinearGradient } from "tamagui/linear-gradient";
 
-const WORKOUT_TYPE_ICONS: Record<WorkoutType, string> = {
-  running: '🏃',
-  cycling: '🚴',
-  swimming: '🏊',
-  walking: '🚶',
-  hiking: '🥾',
-  yoga: '🧘',
-  strength_training: '💪',
-  other: '⚡',
+type WorkoutListScreenNavigationProp = NavigationProp<
+  WorkoutStackParamList,
+  "WorkoutList"
+>;
+
+const WORKOUT_TYPE_ICONS: Record<
+  WorkoutType,
+  React.FC<{ size?: number; color?: string }>
+> = {
+  running: Footprints,
+  cycling: Bike,
+  swimming: Waves,
+  hiking: Mountain,
+  yoga: PersonStanding,
+  strength_training: Dumbbell,
+  other: Sparkles,
 };
 
 const WORKOUT_TYPE_LABELS: Record<WorkoutType, string> = {
-  running: '跑步',
-  cycling: '騎車',
-  swimming: '游泳',
-  walking: '步行',
-  hiking: '登山',
-  yoga: '瑜伽',
-  strength_training: '重訓',
-  other: '其他',
+  running: "跑步",
+  cycling: "騎車",
+  swimming: "游泳",
+  hiking: "登山",
+  yoga: "瑜伽",
+  strength_training: "重訓",
+  other: "其他",
 };
 
 const WorkoutListScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<WorkoutListScreenNavigationProp>();
+  const theme = useTheme();
   const {
     workouts,
     loading,
@@ -52,7 +75,6 @@ const WorkoutListScreen: React.FC = () => {
     fetchWorkouts,
     syncWorkouts,
     setFilters,
-    clearFilters,
   } = useWorkoutStore();
 
   const [refreshing, setRefreshing] = useState(false);
@@ -71,9 +93,9 @@ const WorkoutListScreen: React.FC = () => {
   const handleSync = async () => {
     try {
       await syncWorkouts();
-      Alert.alert('同步成功', '運動記錄已同步');
+      Alert.alert("同步成功", "運動記錄已同步");
     } catch (err) {
-      Alert.alert('同步失敗', '請稍後再試');
+      Alert.alert("同步失敗", "請稍後再試");
     }
   };
 
@@ -88,102 +110,139 @@ const WorkoutListScreen: React.FC = () => {
   };
 
   const handleWorkoutPress = (workout: Workout) => {
-    navigation.navigate('WorkoutDetail' as never, { workoutId: workout.id } as never);
+    navigation.navigate("WorkoutDetail", { workoutId: workout.id });
   };
 
   const handleAddWorkout = () => {
-    navigation.navigate('WorkoutForm' as never);
+    navigation.navigate("WorkoutForm");
   };
 
-  const renderWorkoutItem = ({ item }: { item: Workout }) => {
+  const renderWorkoutItem = (item: Workout) => {
     const date = new Date(item.start_time);
-    const formattedDate = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+    const formattedDate = `${
+      date.getMonth() + 1
+    }/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(
+      2,
+      "0"
+    )}`;
+    const Icon = WORKOUT_TYPE_ICONS[item.workout_type] || Sparkles;
 
     return (
-      <TouchableOpacity
-        style={styles.workoutItem}
+      <YStack
+        key={item.id}
+        backgroundColor="$background"
+        borderRadius="$4"
+        padding="$4"
+        marginBottom="$3"
         onPress={() => handleWorkoutPress(item)}
+        shadowColor="$shadowColor"
+        shadowRadius={3}
+        shadowOffset={{ width: 0, height: 2 }}
+        elevation="$1"
+        animation="bouncy"
+        enterStyle={{ opacity: 0, y: 10 }}
       >
-        <View style={styles.workoutIcon}>
-          <Text style={styles.iconText}>
-            {WORKOUT_TYPE_ICONS[item.workout_type] || '⚡'}
-          </Text>
-        </View>
+        <XStack alignItems="center" space="$3">
+          <YStack
+            width={48}
+            height={48}
+            borderRadius={24}
+            backgroundColor="$blue3"
+            justifyContent="center"
+            alignItems="center"
+          >
+            <Icon size={24} color={theme.blue10?.val} />
+          </YStack>
 
-        <View style={styles.workoutInfo}>
-          <View style={styles.workoutHeader}>
-            <Text style={styles.workoutType}>
-              {WORKOUT_TYPE_LABELS[item.workout_type] || item.workout_type}
-            </Text>
-            {item.sync_status === 'pending' && (
-              <View style={styles.pendingBadge}>
-                <Text style={styles.pendingText}>待同步</Text>
-              </View>
-            )}
-          </View>
+          <YStack flex={1}>
+            <XStack justifyContent="space-between" alignItems="center">
+              <H4 color="$color" margin={0}>
+                {WORKOUT_TYPE_LABELS[item.workout_type] || item.workout_type}
+              </H4>
+              {item.sync_status === "pending" && (
+                <YStack
+                  backgroundColor="$orange9"
+                  paddingHorizontal="$2"
+                  paddingVertical="$1"
+                  borderRadius="$2"
+                >
+                  <Text fontSize="$1" color="$color" fontWeight="bold">
+                    待同步
+                  </Text>
+                </YStack>
+              )}
+            </XStack>
+            <Paragraph theme="alt2">{formattedDate}</Paragraph>
+          </YStack>
+        </XStack>
 
-          <Text style={styles.workoutDate}>{formattedDate}</Text>
-
-          <View style={styles.workoutStats}>
-            {item.distance_km && (
-              <Text style={styles.statText}>
-                {item.distance_km.toFixed(2)} 公里
-              </Text>
-            )}
-            <Text style={styles.statText}>
-              {item.duration_minutes} 分鐘
-            </Text>
-            {item.calories && (
-              <Text style={styles.statText}>
-                {item.calories} 卡
-              </Text>
-            )}
-          </View>
-        </View>
-
-        <View style={styles.chevron}>
-          <Text style={styles.chevronText}>›</Text>
-        </View>
-      </TouchableOpacity>
+        <XStack marginTop="$3" space="$4" flexWrap="wrap">
+          {item.distance_km != null && (
+            <Paragraph theme="alt1">
+              距離: {item.distance_km.toFixed(2)} km
+            </Paragraph>
+          )}
+          {item.duration_minutes != null && (
+            <Paragraph theme="alt1">
+              時長: {item.duration_minutes} min
+            </Paragraph>
+          )}
+          {item.calories != null && (
+            <Paragraph theme="alt1">卡路里: {item.calories} kcal</Paragraph>
+          )}
+        </XStack>
+      </YStack>
     );
   };
 
   const renderTypeFilter = () => {
     const types: Array<WorkoutType | null> = [
       null,
-      'running',
-      'cycling',
-      'swimming',
-      'walking',
+      "running",
+      "cycling",
+      "swimming",
+      "hiking",
+      "yoga",
     ];
 
     return (
-      <View style={styles.filterContainer}>
-        <FlatList
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          data={types}
-          keyExtractor={(item) => item || 'all'}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[
-                styles.filterChip,
-                selectedType === item && styles.filterChipActive,
-              ]}
-              onPress={() => handleFilterByType(item)}
-            >
-              <Text
-                style={[
-                  styles.filterText,
-                  selectedType === item && styles.filterTextActive,
-                ]}
-              >
-                {item ? WORKOUT_TYPE_LABELS[item] : '全部'}
-              </Text>
-            </TouchableOpacity>
-          )}
-        />
-      </View>
+      <YStack
+        paddingVertical="$3"
+        paddingHorizontal="$4"
+        backgroundColor="$background"
+        borderBottomWidth={1}
+        borderBottomColor="$borderColor"
+      >
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <XStack space="$2" alignItems="center">
+            {types.map((item) => {
+              const isActive = selectedType === item;
+              const Icon = item ? WORKOUT_TYPE_ICONS[item] : ListFilter;
+              return (
+                <Button
+                  key={item || "all"}
+                  size="$4" // Slightly larger for icons
+                  circular // Make buttons circular
+                  onPress={() => handleFilterByType(item)}
+                  theme={isActive ? "blue" : "gray"}
+                  variant={isActive ? undefined : "outlined"}
+                  pressStyle={{
+                    scale: 0.95,
+                    opacity: 0.9,
+                  }}
+                  animation="bouncy"
+                  icon={
+                    <Icon
+                      size={20}
+                      color={isActive ? theme.blue10?.val : theme.gray10?.val}
+                    />
+                  }
+                />
+              );
+            })}
+          </XStack>
+        </ScrollView>
+      </YStack>
     );
   };
 
@@ -192,201 +251,123 @@ const WorkoutListScreen: React.FC = () => {
   }
 
   return (
-    <View style={styles.container}>
+    <YStack flex={1} backgroundColor="$backgroundFocus">
       {renderTypeFilter()}
 
       {syncStatus.pending_count > 0 && (
-        <View style={styles.syncBanner}>
-          <Text style={styles.syncText}>
+        <XStack
+          justifyContent="space-between"
+          alignItems="center"
+          backgroundColor="$yellow5"
+          padding="$3"
+          margin="$3"
+          borderRadius="$3"
+        >
+          <Text color="$yellow11" fontWeight="bold">
             {syncStatus.pending_count} 筆記錄待同步
           </Text>
-          <Button
-            title="立即同步"
-            onPress={handleSync}
-            size="small"
-            style={styles.syncButton}
-          />
-        </View>
+          <Button size="$3" onPress={handleSync} theme="yellow_active">
+            立即同步
+          </Button>
+        </XStack>
       )}
 
-      <FlatList
-        data={workouts}
-        renderItem={renderWorkoutItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>尚無運動記錄</Text>
-            <Button
-              title="新增運動"
-              onPress={handleAddWorkout}
-              style={styles.addButton}
+      {workouts.length > 0 ? (
+        <ScrollView
+          contentContainerStyle={{ padding: 16 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={theme.color.val}
             />
-          </View>
-        }
-      />
+          }
+        >
+          {workouts.map(renderWorkoutItem)}
+        </ScrollView>
+      ) : (
+        <YStack
+          flex={1}
+          justifyContent="center"
+          alignItems="center"
+          space="$4" // Increased space for better visual separation
+          padding="$4" // Added padding for overall layout
+        >
+          <ClipboardList size={80} color={theme.gray8?.val} marginBottom="$3" />{" "}
+          {/* Icon added */}
+          <Text fontSize="$6" color="$gray10" marginBottom="$2">
+            尚無運動記錄
+          </Text>
+          <Paragraph theme="alt2" textAlign="center" marginBottom="$5">
+            點擊下方按鈕開始您的第一次運動記錄吧！
+          </Paragraph>
+          <Button
+            size="$5" // Larger button
+            onPress={handleAddWorkout}
+            theme="blue_active" // More prominent theme
+            icon={<Pencil size={20} />} // Added icon to button
+            pressStyle={{ scale: 0.95, opacity: 0.9 }}
+            animation="bouncy"
+            borderRadius="$6"
+            paddingHorizontal="$6"
+          >
+            新增第一次運動
+          </Button>
+        </YStack>
+      )}
 
-      <TouchableOpacity style={styles.fab} onPress={handleAddWorkout}>
-        <Text style={styles.fabText}>+</Text>
-      </TouchableOpacity>
-    </View>
+      <YStack position="absolute" right={24} bottom={24} alignItems="center" justifyContent="center">
+        {/* Sonar Effect */}
+        {[...Array(2)].map((_, i) => (
+          <YStack
+            key={i}
+            position="absolute"
+            width={56}
+            height={56}
+            borderRadius={28}
+            backgroundColor="$blue8"
+            Animation="sonar"
+            animateOnly={['transform', 'opacity']}
+            opacity={0.4}
+            scale={1}
+            {...{
+              transform: [{ scale: 1 }],
+            }}
+            // Custom animation properties
+            // @ts-ignore
+            animationConfig={{
+              delay: i * 1000, // Stagger the animations
+              loop: true,
+              duration: 2000,
+              scale: {
+                from: 1,
+                to: 2.5,
+              },
+              opacity: {
+                from: 0.5,
+                to: 0,
+              },
+            }}
+          />
+        ))}
+
+        {/* Main FAB Button */}
+        <Button
+          size="$6"
+          circular
+          onPress={handleAddWorkout}
+          theme="blue_active"
+          elevation="$4"
+          shadowColor="$shadowColor"
+          shadowRadius={8}
+          shadowOffset={{ width: 0, height: 4 }}
+          pressStyle={{ scale: 0.9, opacity: 0.9 }}
+          animation="bouncy"
+          icon={<Plus color="white" size={28} />}
+        />
+      </YStack>
+    </YStack>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  filterContainer: {
-    backgroundColor: '#fff',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#f0f0f0',
-    marginRight: 8,
-  },
-  filterChipActive: {
-    backgroundColor: '#2196F3',
-  },
-  filterText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  filterTextActive: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  syncBanner: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#FFF3E0',
-    padding: 12,
-  },
-  syncText: {
-    fontSize: 14,
-    color: '#F57C00',
-  },
-  syncButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-  },
-  listContent: {
-    padding: 16,
-  },
-  workoutItem: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  workoutIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#E3F2FD',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  iconText: {
-    fontSize: 24,
-  },
-  workoutInfo: {
-    flex: 1,
-  },
-  workoutHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  workoutType: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-  },
-  pendingBadge: {
-    backgroundColor: '#FF9800',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginLeft: 8,
-  },
-  pendingText: {
-    fontSize: 10,
-    color: '#fff',
-    fontWeight: '600',
-  },
-  workoutDate: {
-    fontSize: 12,
-    color: '#999',
-    marginBottom: 8,
-  },
-  workoutStats: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  statText: {
-    fontSize: 13,
-    color: '#666',
-  },
-  chevron: {
-    marginLeft: 8,
-  },
-  chevronText: {
-    fontSize: 24,
-    color: '#ccc',
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingTop: 60,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#999',
-    marginBottom: 24,
-  },
-  addButton: {
-    marginTop: 16,
-  },
-  fab: {
-    position: 'absolute',
-    right: 24,
-    bottom: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#2196F3',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  fabText: {
-    fontSize: 32,
-    color: '#fff',
-    fontWeight: '300',
-  },
-});
 
 export default WorkoutListScreen;

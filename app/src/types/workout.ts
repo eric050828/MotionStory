@@ -7,7 +7,6 @@ export type WorkoutType =
   | 'running'
   | 'cycling'
   | 'swimming'
-  | 'walking'
   | 'hiking'
   | 'yoga'
   | 'strength_training'
