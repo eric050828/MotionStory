@@ -1,203 +1,200 @@
-/**
- * Login Screen
- * 使用者登入畫面 - Email/密碼 + Google OAuth
- */
-
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
   Alert,
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { useAuthStore } from '../store/useAuthStore';
-import { Button } from '../components/Button';
-import { Input } from '../components/Input';
-import { extractErrorMessage } from '../utils/errorHandler';
+  // 注意：我們移除了 React Native 的 View, Text, StyleSheet, ScrollView
+  // 改用 Tamagui 的版本
+} from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import {
+  YStack,
+  XStack,
+  H2,
+  Paragraph,
+  Input,
+  Button,
+  Text,
+  Label,
+  ScrollView,
+  Separator,
+  Theme,
+  Spinner,
+} from "tamagui";
+
+import { useAuthStore } from "../store/useAuthStore";
+import { extractErrorMessage } from "../utils/errorHandler";
+
+// 為了方便，我們定義一個簡單的錯誤訊息組件
+const ErrorText = ({ children }: { children: string }) => (
+  <Text color="$red10" fontSize="$2" mt="$1" ml="$1">
+    {children}
+  </Text>
+);
 
 export const LoginScreen: React.FC = () => {
   const navigation = useNavigation();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [emailError, setEmailError] = useState('');
-  const [passwordError, setPasswordError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
 
-  const { login, googleLogin, isLoading } = useAuthStore();
+  const { login, isLoading } = useAuthStore();
 
+  // ... 驗證邏輯保持不變 ...
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email) {
-      setEmailError('Email 為必填欄位');
+      setEmailError("Email 為必填欄位");
       return false;
     }
     if (!emailRegex.test(email)) {
-      setEmailError('Email 格式不正確');
+      setEmailError("Email 格式不正確");
       return false;
     }
-    setEmailError('');
+    setEmailError("");
     return true;
   };
 
   const validatePassword = (password: string): boolean => {
     if (!password) {
-      setPasswordError('密碼為必填欄位');
+      setPasswordError("密碼為必填欄位");
       return false;
     }
     if (password.length < 8) {
-      setPasswordError('密碼至少需要 8 個字元');
+      setPasswordError("密碼至少需要 8 個字元");
       return false;
     }
-    setPasswordError('');
+    setPasswordError("");
     return true;
   };
 
   const handleLogin = async () => {
-    const isEmailValid = validateEmail(email);
-    const isPasswordValid = validatePassword(password);
-
-    if (!isEmailValid || !isPasswordValid) {
-      return;
-    }
-
+    if (!validateEmail(email) || !validatePassword(password)) return;
     try {
       await login(email, password);
-      // Navigation will be handled by auth state change
     } catch (error: any) {
-      Alert.alert('登入失敗', extractErrorMessage(error, '請檢查您的帳號密碼'));
+      Alert.alert("登入失敗", extractErrorMessage(error, "請檢查您的帳號密碼"));
     }
   };
 
   const handleGoogleLogin = async () => {
-    try {
-      // TODO: 實作 Google OAuth
-      Alert.alert('開發中', 'Google 登入功能開發中');
-    } catch (error) {
-      Alert.alert('登入失敗', 'Google 登入發生錯誤');
-    }
+    Alert.alert("開發中", "Google 登入功能開發中");
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
+    // 1. 使用 Theme 包裹可以確保內部組件使用特定主題色 (可選)
+    <Theme name="light">
+      <KeyboardAvoidingView
+        style={{ flex: 1 }} // RN 原生組件還是可以用 style，或者包一層 YStack
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>MotionStory</Text>
-          <Text style={styles.subtitle}>運動追蹤與動機平台</Text>
-        </View>
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
+          backgroundColor="$background" // 使用 Tamagui token
+        >
+          {/* 2. 主容器：垂直堆疊，置中，padding */}
+          <YStack f={1} jc="center" p="$5" space="$4">
+            {/* Header */}
+            <YStack ai="center" mb="$6">
+              <H2 color="$blue10" fontWeight="bold" mb="$2">
+                MotionStory
+              </H2>
+              <Paragraph color="$gray10" size="$4">
+                運動追蹤與動機平台
+              </Paragraph>
+            </YStack>
 
-        <View style={styles.form}>
-          <Input
-            label="Email"
-            value={email}
-            onChangeText={(text) => {
-              setEmail(text);
-              setEmailError('');
-            }}
-            placeholder="請輸入 Email"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            error={emailError}
-          />
+            {/* Form */}
+            <YStack space="$4" w="100%">
+              {/* Email Input */}
+              <YStack>
+                <Label htmlFor="email" mb="$1">
+                  Email
+                </Label>
+                <Input
+                  id="email"
+                  value={email}
+                  onChangeText={(t) => {
+                    setEmail(t);
+                    setEmailError("");
+                  }}
+                  placeholder="請輸入 Email"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  borderColor={emailError ? "$red9" : "$borderColor"}
+                  focusStyle={{ borderColor: "$blue10" }} // Focus 時變色
+                  size="$4"
+                />
+                {!!emailError && <ErrorText>{emailError}</ErrorText>}
+              </YStack>
 
-          <Input
-            label="密碼"
-            value={password}
-            onChangeText={(text) => {
-              setPassword(text);
-              setPasswordError('');
-            }}
-            placeholder="請輸入密碼"
-            isPassword
-            error={passwordError}
-          />
+              {/* Password Input */}
+              <YStack>
+                <Label htmlFor="password" mb="$1">
+                  密碼
+                </Label>
+                <Input
+                  id="password"
+                  value={password}
+                  onChangeText={(t) => {
+                    setPassword(t);
+                    setPasswordError("");
+                  }}
+                  placeholder="請輸入密碼"
+                  secureTextEntry
+                  borderColor={passwordError ? "$red9" : "$borderColor"}
+                  focusStyle={{ borderColor: "$blue10" }}
+                  size="$4"
+                />
+                {!!passwordError && <ErrorText>{passwordError}</ErrorText>}
+              </YStack>
 
-          <Button
-            title="登入"
-            onPress={handleLogin}
-            loading={isLoading}
-            style={styles.loginButton}
-          />
+              {/* Login Button */}
+              {/* theme="active" 會讓按鈕使用主色調 (通常是藍色) */}
+              <Button
+                theme="active"
+                size="$4"
+                onPress={handleLogin}
+                disabled={isLoading}
+                icon={isLoading ? <Spinner color="$color" /> : undefined}
+                mt="$2"
+              >
+                登入
+              </Button>
 
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>或</Text>
-            <View style={styles.dividerLine} />
-          </View>
+              {/* Divider */}
+              <XStack ai="center" my="$4">
+                <Separator />
+                <Separator />
+              </XStack>
 
-          <Button
-            title="使用 Google 登入"
-            onPress={handleGoogleLogin}
-            variant="outline"
-            disabled={isLoading}
-          />
+              {/* Google Login Button */}
+              <Button
+                variant="outlined"
+                size="$4"
+                onPress={handleGoogleLogin}
+                disabled={isLoading}
+              >
+                使用 Google 登入
+              </Button>
 
-          <Button
-            title="還沒有帳號？立即註冊"
-            onPress={() => navigation.navigate('Register' as never)}
-            variant="secondary"
-            style={styles.registerButton}
-          />
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+              {/* Register Button */}
+              {/* chromeless 類似 variant="secondary" 或 text button */}
+              <Button
+                chromeless
+                size="$3"
+                mt="$2"
+                onPress={() => navigation.navigate("Register" as never)}
+                color="$gray10"
+              >
+                還沒有帳號？立即註冊
+              </Button>
+            </YStack>
+          </YStack>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </Theme>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: 24,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 48,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#007AFF',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-  },
-  form: {
-    width: '100%',
-  },
-  loginButton: {
-    marginTop: 8,
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#DDD',
-  },
-  dividerText: {
-    marginHorizontal: 16,
-    color: '#999',
-    fontSize: 14,
-  },
-  registerButton: {
-    marginTop: 16,
-  },
-});

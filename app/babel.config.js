@@ -1,9 +1,12 @@
-module.exports = function(api) {
+module.exports = function (api) {
   api.cache(true);
   return {
     presets: ['babel-preset-expo'],
     plugins: [
-      // expo-router/babel is included in babel-preset-expo since SDK 50
+      // 1. Tamagui 需要的環境變數插件
+      'transform-inline-environment-variables',
+
+      // 2. Reanimated 插件 (必須在最後)
       'react-native-reanimated/plugin',
     ],
   };
