@@ -1,493 +1,354 @@
-# Tasks: MotionStory - 運動追蹤與動機平台
+# Tasks: MotionStory Phase 3 - Social Features
 
-**Input**: Design documents from `/specs/001-motionstory/`
-**Prerequisites**: plan.md ✅, research.md ✅, data-model.md ✅, contracts/ ✅, quickstart.md ✅
+**Input**: Design documents from `/specs/001-motionstory/` + Phase 3 spec (FR-036~050)
+**Prerequisites**:
+- Phase 1-2 complete (T001-T180) ✅
+- Design docs expanded (T181-T196) ✅
+- All 6 API contracts created ✅
+- All 9 Collections documented ✅
+- Quickstart scenario 4 added ✅
 
-## 任務總覽
+**Status**: Phase 3 API contracts complete (T190-T195 ✅), ready for TDD implementation (T197~T315, 119 tasks)
 
-- **總任務數**: 180 tasks
-- **平行任務**: ~60 tasks [P]
-- **序列任務**: ~120 tasks
-- **預估時程**: 18-25 天 (1-2 位開發者)
+---
 
-## 技術棧摘要
+## Task Overview
 
-**Backend (Python FastAPI)**:
-- FastAPI 0.110+, Motor (MongoDB async), Pydantic V2
-- Firebase Admin SDK, boto3 (Cloudflare R2)
-- pytest, pytest-asyncio, httpx
+- **Phase 3 任務數**: 119 tasks (T197~T315)
+- **預估時程**: 10-15 天 (1-2 位開發者)
+- **平行任務**: ~45 tasks [P]
+- **序列任務**: ~74 tasks
 
-**Mobile (React Native + Expo)**:
-- React Native 0.74+, Expo SDK 51+
-- React Native Paper, Zustand, React Navigation 6+
-- Victory Native, React Native Reanimated 3
-- Jest, React Native Testing Library, Detox
+---
 
 ## Path Conventions
 
 ```
 api/                          # Backend (Python FastAPI)
 ├── src/
-│   ├── models/              # Pydantic models & MongoDB schemas
-│   ├── services/            # Business logic
-│   ├── routers/             # FastAPI endpoints
-│   ├── core/                # Config, database, middleware
-│   ├── utils/               # Helpers
-│   └── main.py              # FastAPI app
+│   ├── models/              # Phase 3: friendship, challenge, notification, social
+│   ├── services/            # Phase 3: friend, challenge, notification, social services
+│   ├── routers/             # Phase 3: friends, challenges, notifications, social routers
+│   └── utils/               # Phase 3: fcm_helper (Firebase Cloud Messaging)
 └── tests/
-    ├── unit/
-    ├── integration/
-    └── contract/            # API contract tests
+    ├── contract/            # Phase 3: 11 個契約測試檔案
+    ├── unit/                # Phase 3: 社交邏輯單元測試
+    └── integration/         # Phase 3: 珍妮場景整合測試
 
 app/                          # Mobile (React Native + Expo)
 ├── src/
-│   ├── screens/             # Main screens
-│   ├── components/          # Reusable components
-│   ├── services/            # API calls, local storage
-│   ├── store/               # Zustand state management
-│   ├── navigation/          # React Navigation
-│   ├── utils/               # Helpers
-│   └── types/               # TypeScript types
-└── __tests__/               # Jest tests
-    ├── unit/
-    ├── integration/
-    └── e2e/                 # Detox tests
+│   ├── screens/social/      # Phase 3: 社交畫面目錄
+│   ├── components/social/   # Phase 3: 社交元件
+│   ├── services/api/        # Phase 3: 擴充 API client
+│   └── store/               # Phase 3: social stores
+└── __tests__/
+    ├── unit/                # Phase 3: 社交元件測試
+    └── e2e/                 # Phase 3: 珍妮場景 E2E 測試
 ```
-
----
-
-## Phase 3.1: Setup (1-3 天)
-
-**目標**: 專案初始化、依賴安裝、環境配置
-
-- [X] **T001** [P] 建立 Backend 專案結構 `api/` 目錄與子目錄
-- [X] **T002** [P] 建立 Mobile 專案結構 `app/` 目錄與子目錄
-- [X] **T003** [P] Backend: 初始化 Python 專案 - `api/requirements.txt` 與 `api/pyproject.toml`
-- [X] **T004** [P] Mobile: 初始化 Expo 專案 - `npx create-expo-app@latest app`
-- [X] **T005** [P] Backend: 安裝核心依賴 (FastAPI, Motor, Pydantic, Firebase Admin, boto3)
-- [X] **T006** [P] Mobile: 安裝核心依賴 (React Native Paper, Zustand, React Navigation, Victory Native, Reanimated)
-- [X] **T007** [P] Backend: 配置 Linting (Ruff) 與格式化 (Black) - `api/pyproject.toml`
-- [X] **T008** [P] Mobile: 配置 ESLint 與 Prettier - `app/.eslintrc.js`, `app/.prettierrc`
-- [X] **T009** [P] Backend: 環境變數設定 - `api/.env.example` (MongoDB URI, Firebase credentials, R2 config)
-- [X] **T010** [P] Mobile: 環境變數設定 - `app/.env.example` (API_BASE_URL, Firebase config)
-- [X] **T011** [P] Backend: 建立 Dockerfile 與 render.yaml 部署配置
-- [X] **T012** [P] Mobile: 配置 Expo app.json (名稱、版本、平台設定)
-
-**Dependencies**: 無 - 所有 Setup 任務可平行執行
 
 ---
 
 ## Phase 3.2: Tests First (TDD) (2-3 天)
 
-**⚠️ CRITICAL**: 這些測試必須在 Phase 3.3/3.4 實作前完成，且**必須失敗** (紅燈階段)
+**⚠️ CRITICAL: 所有測試必須先寫完並失敗 (紅燈階段)，才能進入 Phase 3.3/3.4 實作**
 
-### Contract Tests (基於 5 個 API 契約檔案)
+### Contract Tests (基於 6 個 API 契約檔案)
 
-- [X] **T013** [P] Auth Contract: 註冊端點 - `api/tests/contract/test_auth_register.py``
-- [X] **T014** [P] Auth Contract: 登入端點 - `api/tests/contract/test_auth_login.py`
-- [X] **T015** [P] Auth Contract: Token 刷新 - `api/tests/contract/test_auth_token.py`
-- [X] **T016** [P] Workouts Contract: 建立運動記錄 - `api/tests/contract/test_workouts_create.py`
-- [X] **T017** [P] Workouts Contract: 查詢運動記錄 - `api/tests/contract/test_workouts_get.py`
-- [X] **T018** [P] Workouts Contract: 批次同步 - `api/tests/contract/test_workouts_sync.py`
-- [X] **T019** [P] Workouts Contract: CSV 匯入匯出 - `api/tests/contract/test_workouts_io.py`
-- [X] **T020** [P] Achievements Contract: 成就檢查 - `api/tests/contract/test_achievements_check.py`
-- [X] **T021** [P] Achievements Contract: 分享卡片生成 - `api/tests/contract/test_achievements_share.py`
-- [X] **T022** [P] Dashboards Contract: Widget CRUD - `api/tests/contract/test_dashboards_widgets.py`
-- [X] **T023** [P] Dashboards Contract: 拖拉排序 - `api/tests/contract/test_dashboards_reorder.py`
-- [X] **T024** [P] Timeline Contract: 時間軸查詢 - `api/tests/contract/test_timeline_query.py`
-- [X] **T025** [P] Timeline Contract: 年度回顧生成 - `api/tests/contract/test_timeline_review.py`
+- [X] **T197** [P] Friends Contract: 搜尋好友端點 - `api/tests/contract/test_friends_search.py`
+- [X] **T198** [P] Friends Contract: 好友邀請端點 - `api/tests/contract/test_friends_invite.py`
+- [X] **T199** [P] Friends Contract: 好友清單查詢 - `api/tests/contract/test_friends_list.py`
+- [X] **T200** [P] Social Contract: 好友動態牆 - `api/tests/contract/test_social_feed.py`
+- [X] **T201** [P] Social Contract: 按讚與留言 - `api/tests/contract/test_social_interactions.py`
+- [X] **T202** [P] Challenges Contract: 創建挑戰賽 - `api/tests/contract/test_challenges_create.py`
+- [X] **T203** [P] Challenges Contract: 加入與離開挑戰 - `api/tests/contract/test_challenges_join.py`
+- [X] **T204** [P] Challenges Contract: 挑戰排行榜 - `api/tests/contract/test_challenges_leaderboard.py`
+- [X] **T205** [P] Notifications Contract: 通知查詢與管理 - `api/tests/contract/test_notifications.py`
+- [X] **T206** [P] Leaderboard Contract: 好友排行榜 - `api/tests/contract/test_leaderboard.py`
+- [X] **T207** [P] Profiles Contract: 個人檔案公開化 - `api/tests/contract/test_profiles.py`
 
-### Backend Unit Tests (Models & Services)
+### Backend Unit Tests
 
-- [X] **T026** [P] User Model 驗證測試 - `api/tests/unit/test_user_model.py`
-- [X] **T027** [P] Workout Model 驗證測試 - `api/tests/unit/test_workout_model.py`
-- [X] **T028** [P] Achievement Model 驗證測試 - `api/tests/unit/test_achievement_model.py`
-- [X] **T029** [P] Dashboard Model 驗證測試 - `api/tests/unit/test_dashboard_model.py`
-- [X] **T030** [P] Auth Service 邏輯測試 - `api/tests/unit/test_auth_service.py`
-- [X] **T031** [P] Workout Service 邏輯測試 - `api/tests/unit/test_workout_service.py`
-- [X] **T032** [P] Achievement Service 邏輯測試 - `api/tests/unit/test_achievement_service.py`
+- [X] **T208** [P] Friendship Model 驗證測試 - `api/tests/unit/test_friendship_model.py`
+- [X] **T209** [P] Challenge Model 驗證測試 - `api/tests/unit/test_challenge_model.py`
+- [X] **T210** [P] Notification Model 驗證測試 - `api/tests/unit/test_notification_model.py`
+- [X] **T211** [P] Friend Service 邏輯測試 - `api/tests/unit/test_friend_service.py`
+- [X] **T212** [P] Challenge Service 邏輯測試 - `api/tests/unit/test_challenge_service.py`
+- [X] **T213** [P] Notification Service 邏輯測試 - `api/tests/unit/test_notification_service.py`
 
 ### Mobile Component Tests
 
-- [X] **T033** [P] 基礎 Button 元件測試 - `app/__tests__/unit/components/ui/Button.test.tsx`
-- [X] **T034** [P] 基礎 Card 元件測試 - `app/__tests__/unit/components/ui/Card.test.tsx`
-- [X] **T035** [P] 基礎 Input 元件測試 - `app/__tests__/unit/components/ui/Input.test.tsx`
-- [X] **T036** [P] 慶祝動畫元件測試 - `app/__tests__/unit/components/animations/CelebrationAnimation.test.tsx`
-- [X] **T037** [P] Widget 元件測試 (ProgressWidget) - `app/__tests__/unit/components/widgets/ProgressWidget.test.tsx`
-- [X] **T038** [P] Widget 元件測試 (ChartWidget) - `app/__tests__/unit/components/widgets/ChartWidget.test.tsx`
+- [ ] **T214** [P] FriendList 元件測試 - `app/__tests__/unit/components/social/FriendList.test.tsx`
+- [ ] **T215** [P] ActivityFeed 元件測試 - `app/__tests__/unit/components/social/ActivityFeed.test.tsx`
+- [ ] **T216** [P] ChallengeCard 元件測試 - `app/__tests__/unit/components/social/ChallengeCard.test.tsx`
 
-### Integration Tests (基於 quickstart.md 場景)
+### Integration Tests (基於珍妮場景)
 
-- [X] **T039** [P] 場景 1: 小美首次運動與慶祝 - `api/tests/integration/test_scenario_beginner.py`
-- [X] **T040** [P] 場景 2: 大衛客製化儀表板 - `api/tests/integration/test_scenario_advanced.py`
-- [X] **T041** [P] 場景 3: 艾莉年度回顧 - `api/tests/integration/test_scenario_longterm.py`
-
-**Dependencies**: Setup (T001-T012) → Tests (T013-T041)
+- [ ] **T217** [P] 場景 4: 珍妮的社交互動 - `api/tests/integration/test_scenario_social.py`
 
 ---
 
 ## Phase 3.3: Backend Implementation (5-7 天)
 
-**⚠️ 只有在 Phase 3.2 測試全部失敗後才能開始**
+### MongoDB Models (9 個新 Collections)
 
-### Core Configuration & Database
+- [X] **T218** [P] Friendship Model - `api/src/models/friendship.py`
+- [X] **T219** [P] Activity Model - `api/src/models/activity.py`
+- [X] **T220** [P] Like Model - `api/src/models/like.py`
+- [X] **T221** [P] Comment Model - `api/src/models/comment.py`
+- [X] **T222** [P] Challenge Model - `api/src/models/challenge.py`
+- [X] **T223** [P] Participant Model - `api/src/models/participant.py`
+- [X] **T224** [P] Notification Model - `api/src/models/notification.py`
+- [X] **T225** [P] Leaderboard Model - `api/src/models/leaderboard.py`
+- [X] **T226** [P] BlockList Model - `api/src/models/blocklist.py`
 
-- [X] **T042** Backend Core: 環境配置 - `api/src/core/config.py`
-- [X] **T043** Backend Core: MongoDB 連接 - `api/src/core/database.py`
-- [X] **T044** Backend Core: Firebase Auth 初始化 - `api/src/core/security.py`
-- [X] **T045** Backend Core: 依賴注入 - `api/src/core/deps.py`
-- [X] **T046** Backend Core: CORS & Middleware - `api/src/main.py`
+### Database Indexes (9 個 Collections)
 
-### MongoDB Models (7 個 Collections)
-
-- [X] **T047** [P] User Model - `api/src/models/user.py`
-- [X] **T048** [P] Workout Model - `api/src/models/workout.py`
-- [X] **T049** [P] Achievement Model - `api/src/models/achievement.py`
-- [X] **T050** [P] Dashboard Model - `api/src/models/dashboard.py`
-- [X] **T051** [P] Milestone Model - `api/src/models/milestone.py`
-- [X] **T052** [P] Annual Review Model - `api/src/models/annual_review.py`
-- [X] **T053** [P] Share Card Model - `api/src/models/share_card.py`
-
-### Database Indexes (18 個索引)
-
-- [X] **T054** Users Collection 索引設定 - `api/src/models/user.py` (firebase_uid, email)
-- [X] **T055** Workouts Collection 索引設定 - `api/src/models/workout.py` (user_id+date, type+date, user_id+sync_status)
-- [X] **T056** Achievements Collection 索引設定 - `api/src/models/achievement.py` (user_id+achieved_at, type)
-- [X] **T057** Dashboards Collection 索引設定 - `api/src/models/dashboard.py` (user_id)
-- [X] **T058** Milestones Collection 索引設定 - `api/src/models/milestone.py` (user_id+date)
-- [X] **T059** Annual Reviews Collection 索引設定 - `api/src/models/annual_review.py` (user_id+year)
-- [X] **T060** Share Cards Collection 索引設定 - `api/src/models/share_card.py` (user_id+created_at)
+- [X] **T227** Friendships Collection 索引設定 - `api/src/core/database.py`
+- [X] **T228** Activities Collection 索引設定 - `api/src/core/database.py`
+- [X] **T229** Likes Collection 索引設定 - `api/src/core/database.py`
+- [X] **T230** Comments Collection 索引設定 - `api/src/core/database.py`
+- [X] **T231** Challenges Collection 索引設定 - `api/src/core/database.py`
+- [X] **T232** Participants Collection 索引設定 - `api/src/core/database.py`
+- [X] **T233** Notifications Collection 索引設定 - `api/src/core/database.py`
+- [X] **T234** Leaderboards Collection 索引設定 - `api/src/core/database.py`
+- [X] **T235** BlockList Collection 索引設定 - `api/src/core/database.py`
 
 ### Service Layer (Business Logic)
 
-- [X] **T061** Auth Service: Firebase Token 驗證 - `api/src/services/auth_service.py`
-- [X] **T062** Auth Service: 使用者註冊與登入 - `api/src/services/auth_service.py`
-- [X] **T063** Workout Service: CRUD 操作 - `api/src/services/workout_service.py`
-- [X] **T064** Workout Service: 批次同步邏輯 - `api/src/services/workout_service.py`
-- [X] **T065** Workout Service: CSV 匯入匯出 - `api/src/services/workout_service.py`
-- [X] **T066** Achievement Service: 成就檢查引擎 - `api/src/services/achievement_service.py`
-- [X] **T067** Achievement Service: 慶祝等級判定 - `api/src/services/achievement_service.py`
-- [X] **T068** Achievement Service: 分享卡片生成 (R2 上傳) - `api/src/services/achievement_service.py`
-- [X] **T069** Dashboard Service: Widget CRUD - `api/src/services/dashboard_service.py`
-- [X] **T070** Dashboard Service: 拖拉排序邏輯 - `api/src/services/dashboard_service.py`
-- [X] **T071** Timeline Service: 時間軸查詢 (虛擬滾動) - `api/src/services/timeline_service.py`
-- [X] **T072** Timeline Service: 年度回顧統計 (Aggregation Pipeline) - `api/src/services/timeline_service.py`
-- [X] **T073** Timeline Service: 年度回顧網頁生成 - `api/src/services/timeline_service.py`
+- [X] **T236** Friend Service: 好友搜尋邏輯 - `api/src/services/friend_service.py`
+- [X] **T237** Friend Service: 好友邀請與接受 - `api/src/services/friend_service.py`
+- [X] **T238** Friend Service: 封鎖機制 - `api/src/services/friend_service.py`
+- [X] **T239** Social Service: 好友動態牆 (Cursor Pagination) - `api/src/services/social_service.py`
+- [X] **T240** Social Service: 按讚與留言邏輯 - `api/src/services/social_service.py`
+- [X] **T241** Social Service: 內容審核 (敏感詞過濾) - `api/src/services/social_service.py`
+- [X] **T242** Challenge Service: 創建與管理挑戰賽 - `api/src/services/challenge_service.py`
+- [X] **T243** Challenge Service: 參與者管理 - `api/src/services/challenge_service.py`
+- [X] **T244** Challenge Service: 排名計算邏輯 - `api/src/services/challenge_service.py`
+- [X] **T245** Notification Service: 通知觸發邏輯 - `api/src/services/notification_service.py`
+- [X] **T246** Notification Service: Firebase Cloud Messaging 整合 - `api/src/services/notification_service.py`
+- [X] **T247** Leaderboard Service: 好友排行榜計算 - `api/src/services/leaderboard_service.py`
+- [X] **T248** Scheduled Tasks: 稀有成就每日批次計算 (APScheduler) - `api/src/services/achievement_service.py`
 
-### API Routers (FastAPI Endpoints)
+### API Routers (25+ Endpoints)
 
-- [X] **T074** Auth Router: POST /auth/register - `api/src/routers/auth.py`
-- [X] **T075** Auth Router: POST /auth/login - `api/src/routers/auth.py`
-- [X] **T076** Auth Router: POST /auth/refresh - `api/src/routers/auth.py`
-- [X] **T077** Auth Router: GET /auth/me - `api/src/routers/auth.py`
-- [X] **T078** Workouts Router: POST /workouts - `api/src/routers/workouts.py`
-- [X] **T079** Workouts Router: GET /workouts - `api/src/routers/workouts.py`
-- [X] **T080** Workouts Router: GET /workouts/{id} - `api/src/routers/workouts.py`
-- [X] **T081** Workouts Router: PUT /workouts/{id} - `api/src/routers/workouts.py`
-- [X] **T082** Workouts Router: DELETE /workouts/{id} - `api/src/routers/workouts.py`
-- [X] **T083** Workouts Router: POST /workouts/sync - `api/src/routers/workouts.py`
-- [X] **T084** Workouts Router: POST /workouts/import - `api/src/routers/workouts.py`
-- [X] **T085** Workouts Router: GET /workouts/export - `api/src/routers/workouts.py`
-- [X] **T086** Achievements Router: GET /achievements - `api/src/routers/achievements.py`
-- [X] **T087** Achievements Router: POST /achievements/check - `api/src/routers/achievements.py`
-- [X] **T088** Achievements Router: POST /achievements/{id}/share - `api/src/routers/achievements.py`
-- [X] **T089** Dashboards Router: GET /dashboards - `api/src/routers/dashboards.py`
-- [X] **T090** Dashboards Router: POST /dashboards/widgets - `api/src/routers/dashboards.py`
-- [X] **T091** Dashboards Router: PUT /dashboards/widgets/{id} - `api/src/routers/dashboards.py`
-- [X] **T092** Dashboards Router: DELETE /dashboards/widgets/{id} - `api/src/routers/dashboards.py`
-- [X] **T093** Dashboards Router: POST /dashboards/reorder - `api/src/routers/dashboards.py`
-- [X] **T094** Timeline Router: GET /timeline - `api/src/routers/timeline.py`
-- [X] **T095** Timeline Router: GET /timeline/milestones - `api/src/routers/timeline.py`
-- [X] **T096** Timeline Router: POST /timeline/annual-review - `api/src/routers/timeline.py`
-- [X] **T097** Timeline Router: GET /timeline/annual-review/{year} - `api/src/routers/timeline.py`
+- [X] **T249** Friends Router: POST /friends/search - `api/src/routers/friends.py`
+- [X] **T250** Friends Router: POST /friends/invite - `api/src/routers/friends.py`
+- [X] **T251** Friends Router: GET /friends - `api/src/routers/friends.py`
+- [X] **T252** Friends Router: POST /friends/{id}/accept - `api/src/routers/friends.py`
+- [X] **T253** Friends Router: POST /friends/{id}/reject - `api/src/routers/friends.py`
+- [X] **T254** Friends Router: DELETE /friends/{id} - `api/src/routers/friends.py`
+- [X] **T255** Friends Router: POST /friends/{id}/block - `api/src/routers/friends.py`
+- [X] **T256** Friends Router: GET /friends/requests - `api/src/routers/friends.py`
+- [X] **T257** Social Router: GET /social/feed - `api/src/routers/social.py`
+- [X] **T258** Social Router: POST /activities/{id}/like - `api/src/routers/social.py`
+- [X] **T259** Social Router: DELETE /activities/{id}/like - `api/src/routers/social.py`
+- [X] **T260** Social Router: POST /activities/{id}/comment - `api/src/routers/social.py`
+- [X] **T261** Social Router: GET /activities/{id}/comments - `api/src/routers/social.py`
+- [X] **T262** Challenges Router: POST /challenges - `api/src/routers/challenges.py`
+- [X] **T263** Challenges Router: GET /challenges - `api/src/routers/challenges.py`
+- [X] **T264** Challenges Router: GET /challenges/{id} - `api/src/routers/challenges.py`
+- [X] **T265** Challenges Router: POST /challenges/{id}/join - `api/src/routers/challenges.py`
+- [X] **T266** Challenges Router: POST /challenges/{id}/leave - `api/src/routers/challenges.py`
+- [X] **T267** Challenges Router: GET /challenges/{id}/leaderboard - `api/src/routers/challenges.py`
+- [X] **T268** Notifications Router: GET /notifications - `api/src/routers/notifications.py`
+- [X] **T269** Notifications Router: PUT /notifications/{id}/read - `api/src/routers/notifications.py`
+- [X] **T270** Notifications Router: PUT /notifications/preferences - `api/src/routers/notifications.py`
+- [X] **T271** Leaderboard Router: GET /leaderboard/friends - `api/src/routers/leaderboard.py`
+- [X] **T272** Profiles Router: GET /profiles/{user_id} - `api/src/routers/profiles.py`
+- [X] **T273** Profiles Router: PUT /profiles/me - `api/src/routers/profiles.py`
 
 ### External Integrations
 
-- [X] **T098** Cloudflare R2 檔案上傳 Helper - `api/src/utils/r2_storage.py`
-- [X] **T099** Firebase Admin SDK Token 驗證 - `api/src/utils/firebase_auth.py`
-- [X] **T100** 錯誤處理 & Logging Middleware - `api/src/core/middleware.py`
-
-**Dependencies**:
-- Tests (T013-T041) → Core (T042-T046) → Models (T047-T060) → Services (T061-T073) → Routers (T074-T097) → Integrations (T098-T100)
+- [X] **T274** Firebase Cloud Messaging Helper - `api/src/utils/fcm_helper.py`
+- [X] **T275** 分享卡片生成 (5 種模板) - `api/src/utils/share_card_generator.py`
 
 ---
 
 ## Phase 3.4: Mobile Implementation (7-10 天)
 
-**⚠️ 只有在 Backend API (T042-T100) 完成後才能開始整合**
+### TypeScript Types (Phase 3 社交)
 
-### TypeScript Types (基於 data-model.md)
+- [ ] **T276** [P] Friendship Types - `app/src/types/friendship.ts`
+- [ ] **T277** [P] Challenge Types - `app/src/types/challenge.ts`
+- [ ] **T278** [P] Notification Types - `app/src/types/notification.ts`
 
-- [X] **T101** [P] User Types - `app/src/types/user.ts`
-- [X] **T102** [P] Workout Types - `app/src/types/workout.ts`
-- [X] **T103** [P] Achievement Types - `app/src/types/achievement.ts`
-- [X] **T104** [P] Dashboard & Widget Types - `app/src/types/dashboard.ts`
-- [X] **T105** [P] Timeline Types - `app/src/types/timeline.ts`
+### API Client (擴充)
 
-### API Client (FastAPI 串接)
-
-- [X] **T106** API Client 基礎設定 - `app/src/services/api/client.ts` (axios, interceptors)
-- [X] **T107** Auth API Service - `app/src/services/api/auth.ts`
-- [X] **T108** Workouts API Service - `app/src/services/api/workouts.ts`
-- [X] **T109** Achievements API Service - `app/src/services/api/achievements.ts`
-- [X] **T110** Dashboards API Service - `app/src/services/api/dashboards.ts`
-- [X] **T111** Timeline API Service - `app/src/services/api/timeline.ts`
-
-### Local Storage (Expo SQLite)
-
-- [X] **T112** SQLite 初始化 - `app/src/services/storage/database.ts`
-- [X] **T113** Workouts 本地 Schema - `app/src/services/storage/workouts.ts`
-- [X] **T114** 同步狀態管理 - `app/src/services/storage/sync.ts`
-
-### Offline Sync Logic
-
-- [X] **T115** 離線佇列邏輯 - `app/src/services/sync/queue.ts`
-- [X] **T116** 衝突解決策略 - `app/src/services/sync/conflict.ts`
-- [X] **T117** 網路狀態監聽 - `app/src/services/sync/network.ts`
+- [ ] **T279** Friends API Service - `app/src/services/api/friends.ts`
+- [ ] **T280** Social API Service - `app/src/services/api/social.ts`
+- [ ] **T281** Challenges API Service - `app/src/services/api/challenges.ts`
+- [ ] **T282** Notifications API Service - `app/src/services/api/notifications.ts`
+- [ ] **T283** Leaderboard API Service - `app/src/services/api/leaderboard.ts`
 
 ### Zustand State Management
 
-- [X] **T118** Auth Store - `app/src/store/auth.ts` (登入狀態、Token 管理)
-- [X] **T119** Workout Store - `app/src/store/workout.ts` (運動記錄、同步狀態)
-- [X] **T120** Dashboard Store - `app/src/store/dashboard.ts` (Widget 配置、拖拉狀態)
-- [X] **T121** Achievement Store - `app/src/store/achievement.ts` (成就清單、慶祝觸發)
+- [ ] **T284** Friend Store - `app/src/store/friend.ts`
+- [ ] **T285** Social Store - `app/src/store/social.ts`
+- [ ] **T286** Challenge Store - `app/src/store/challenge.ts`
+- [ ] **T287** Notification Store - `app/src/store/notification.ts`
 
-### UI Components - 基礎元件
+### Social UI Components
 
-- [X] **T122** [P] Button 元件 - `app/src/components/ui/Button.tsx`
-- [X] **T123** [P] Card 元件 - `app/src/components/ui/Card.tsx`
-- [X] **T124** [P] Input 元件 - `app/src/components/ui/Input.tsx`
-- [X] **T125** [P] Loading 元件 - `app/src/components/ui/Loading.tsx`
+- [ ] **T288** [P] FriendListItem - `app/src/components/social/FriendListItem.tsx`
+- [ ] **T289** [P] ActivityCard - `app/src/components/social/ActivityCard.tsx`
+- [ ] **T290** [P] ChallengeCard - `app/src/components/social/ChallengeCard.tsx`
+- [ ] **T291** [P] LeaderboardItem - `app/src/components/social/LeaderboardItem.tsx`
+- [ ] **T292** [P] NotificationItem - `app/src/components/social/NotificationItem.tsx`
+- [ ] **T293** [P] ShareCardPreview - `app/src/components/social/ShareCardPreview.tsx`
 
-### UI Components - 慶祝動畫 (Reanimated 3)
+### Main Screens - Social
 
-- [X] **T126** [P] 基礎慶祝動畫 - `app/src/components/animations/BasicCelebration.tsx`
-- [X] **T127** [P] 煙火慶祝動畫 - `app/src/components/animations/FireworksCelebration.tsx`
-- [X] **T128** [P] 史詩級慶祝動畫 - `app/src/components/animations/EpicCelebration.tsx`
-- [X] **T129** 慶祝動畫觸發邏輯 - `app/src/components/animations/CelebrationTrigger.tsx`
+- [ ] **T294** 好友列表與搜尋畫面 - `app/src/screens/social/FriendsScreen.tsx`
+- [ ] **T295** 好友動態牆畫面 - `app/src/screens/social/FeedScreen.tsx`
+- [ ] **T296** 挑戰列表畫面 - `app/src/screens/social/ChallengesScreen.tsx`
+- [ ] **T297** 創建挑戰畫面 - `app/src/screens/social/CreateChallengeScreen.tsx`
+- [ ] **T298** 挑戰詳情與排名 - `app/src/screens/social/ChallengeDetailScreen.tsx`
+- [ ] **T299** 好友排行榜畫面 - `app/src/screens/social/LeaderboardScreen.tsx`
+- [ ] **T300** 通知中心畫面 - `app/src/screens/social/NotificationsScreen.tsx`
+- [ ] **T301** 個人公開檔案畫面 - `app/src/screens/social/ProfileScreen.tsx`
+- [ ] **T302** 分享卡片編輯器 - `app/src/screens/social/ShareCardEditorScreen.tsx`
 
-### UI Components - Dashboard Widgets (12 種 Widget)
+### Native Integration
 
-- [X] **T130** [P] 進度條 Widget - `app/src/components/widgets/ProgressWidget.tsx`
-- [X] **T131** [P] 折線圖 Widget - `app/src/components/widgets/LineChartWidget.tsx`
-- [X] **T132** [P] 長條圖 Widget - `app/src/components/widgets/BarChartWidget.tsx`
-- [X] **T133** [P] 圓餅圖 Widget - `app/src/components/widgets/PieChartWidget.tsx`
-- [X] **T134** [P] 數字卡片 Widget - `app/src/components/widgets/StatCardWidget.tsx`
-- [X] **T135** [P] 熱力圖 Widget - `app/src/components/widgets/HeatmapWidget.tsx`
-- [X] **T136** [P] 目標追蹤 Widget - `app/src/components/widgets/GoalWidget.tsx`
-- [X] **T137** [P] 連續天數 Widget - `app/src/components/widgets/StreakWidget.tsx`
-- [X] **T138** [P] 排行榜 Widget - `app/src/components/widgets/LeaderboardWidget.tsx`
-- [X] **T139** [P] 月曆 Widget - `app/src/components/widgets/CalendarWidget.tsx`
-- [X] **T140** [P] 快速統計 Widget - `app/src/components/widgets/QuickStatsWidget.tsx`
-- [X] **T141** [P] 配速圖表 Widget - `app/src/components/widgets/PaceChartWidget.tsx`
-
-### UI Components - Charts (Victory Native)
-
-- [X] **T142** [P] 折線圖元件 - `app/src/components/charts/LineChart.tsx`
-- [X] **T143** [P] 長條圖元件 - `app/src/components/charts/BarChart.tsx`
-- [X] **T144** [P] 圓餅圖元件 - `app/src/components/charts/PieChart.tsx`
-
-### Main Screens - Authentication
-
-- [X] **T145** 登入畫面 - `app/src/screens/auth/LoginScreen.tsx`
-- [X] **T146** 註冊畫面 - `app/src/screens/auth/RegisterScreen.tsx`
-- [X] **T147** Google OAuth 整合 - `app/src/screens/auth/GoogleSignIn.tsx`
-
-### Main Screens - Workout
-
-- [X] **T148** 運動記錄畫面 - `app/src/screens/workout/CreateWorkoutScreen.tsx`
-- [X] **T149** 運動歷史清單 - `app/src/screens/workout/WorkoutListScreen.tsx`
-- [X] **T150** 運動詳細資訊 - `app/src/screens/workout/WorkoutDetailScreen.tsx`
-- [X] **T151** CSV 匯入畫面 - `app/src/screens/workout/ImportScreen.tsx`
-
-### Main Screens - Dashboard
-
-- [X] **T152** 儀表板工作室 - `app/src/screens/dashboard/DashboardStudioScreen.tsx`
-- [X] **T153** Widget 選擇器 - `app/src/screens/dashboard/WidgetPickerScreen.tsx`
-- [X] **T154** 拖拉排序互動 (React Native Gesture Handler) - `app/src/screens/dashboard/DragDropHandler.tsx`
-
-### Main Screens - Timeline
-
-- [X] **T155** 時間軸畫面 (虛擬滾動) - `app/src/screens/timeline/TimelineScreen.tsx`
-- [X] **T156** 里程碑標記 - `app/src/screens/timeline/MilestoneMarker.tsx`
-- [X] **T157** 年度回顧畫面 - `app/src/screens/timeline/AnnualReviewScreen.tsx`
-
-### Main Screens - Profile
-
-- [X] **T158** 個人設定畫面 - `app/src/screens/profile/ProfileScreen.tsx`
-- [X] **T159** 隱私設定 - `app/src/screens/profile/PrivacySettingsScreen.tsx`
-- [X] **T160** 資料匯出畫面 - `app/src/screens/profile/ExportScreen.tsx`
+- [ ] **T303** React Native Share 整合 (4 平台) - `app/src/services/share_service.ts`
+- [ ] **T304** Firebase Cloud Messaging 推播通知 - `app/src/services/notification_service.ts`
 
 ### Navigation
 
-- [X] **T161** React Navigation 設定 - `app/src/navigation/index.tsx`
-- [X] **T162** Auth Navigator - `app/src/navigation/AuthNavigator.tsx`
-- [X] **T163** Main Tab Navigator - `app/src/navigation/MainNavigator.tsx`
-
-**Dependencies**:
-- Types (T101-T105) → API Client (T106-T111), Storage (T112-T114), Stores (T118-T121)
-- Stores (T118-T121) → Screens (T145-T160)
-- UI Components (T122-T144) → Screens (T145-T160)
-- Screens (T145-T160) → Navigation (T161-T163)
+- [ ] **T305** Social Tab Navigator - `app/src/navigation/SocialNavigator.tsx`
 
 ---
 
 ## Phase 3.5: Integration & Polish (3-5 天)
 
-### E2E Tests (Detox - 基於 quickstart.md)
+### E2E Tests (Detox)
 
-- [X] **T164** [P] Detox 環境設定 - `app/__tests__/e2e/setup.ts`
-- [X] **T165** [P] E2E: 小美場景 (首次運動與慶祝) - `app/__tests__/e2e/beginner.e2e.ts`
-- [X] **T166** [P] E2E: 大衛場景 (客製化儀表板) - `app/__tests__/e2e/advanced.e2e.ts`
-- [X] **T167** [P] E2E: 艾莉場景 (年度回顧) - `app/__tests__/e2e/longterm.e2e.ts`
+- [ ] **T306** [P] Detox: 珍妮場景 (Week 1-4) - `app/__tests__/e2e/social.e2e.ts`
 
 ### Performance Optimization
 
-- [X] **T168** Backend: API 回應時間優化 (目標 P95 < 200ms) - `api/src/core/performance.py`
-- [X] **T169** Mobile: 虛擬滾動優化 (FlatList) - `app/src/screens/timeline/TimelineScreen.tsx`
-- [X] **T170** Mobile: 圖片壓縮與快取 - `app/src/utils/imageOptimization.ts`
-- [X] **T171** Mobile: 慶祝動畫 60 FPS 驗證 - `app/src/components/animations/__performance__/fps.test.ts`
-- [X] **T172** Backend: 年度回顧生成效能 (< 3 秒) - `api/src/services/timeline_service.py`
+- [ ] **T307** Backend: 好友動態載入效能 (< 200ms) - `api/src/services/social_service.py`
+- [ ] **T308** Backend: 稀有成就批次計算優化 - `api/src/services/achievement_service.py`
+- [ ] **T309** Mobile: 分享卡片模板預渲染 - `app/src/components/social/ShareCardPreview.tsx`
+- [ ] **T310** Mobile: 好友動態 FlatList 虛擬滾動 - `app/src/screens/social/FeedScreen.tsx`
 
 ### Error Handling & Logging
 
-- [X] **T173** Backend: 統一錯誤處理 - `api/src/core/errors.py`
-- [X] **T174** Backend: 請求日誌 Middleware - `api/src/core/logging.py`
-- [X] **T175** Mobile: 錯誤邊界元件 - `app/src/components/ErrorBoundary.tsx`
-- [X] **T176** Mobile: 離線錯誤處理 - `app/src/services/sync/errorHandler.ts`
+- [ ] **T311** Backend: 社交功能錯誤處理 - `api/src/routers/friends.py, challenges.py, social.py`
+- [ ] **T312** Mobile: 社交功能錯誤邊界 - `app/src/components/social/SocialErrorBoundary.tsx`
 
-### Deployment Configuration
+### Deployment & Validation
 
-- [X] **T177** Backend: Render 部署配置 - `api/render.yaml`
-- [X] **T178** Backend: Docker 優化 (Multi-stage build) - `api/Dockerfile`
-- [X] **T179** MongoDB Atlas: 索引建立腳本 - `api/scripts/create_indexes.py`
-- [X] **T180** Mobile: Expo EAS Build 配置 - `app/eas.json`
-
-**Dependencies**:
-- All Previous Phases (T001-T163) → Integration (T164-T180)
+- [ ] **T313** Backend: 部署 Phase 3 至 Render - `api/render.yaml`
+- [ ] **T314** Mobile: 更新 Expo Build 配置 - `app/eas.json`
+- [ ] **T315** 效能驗證: 通知延遲 < 30 秒, 分享卡片 < 2 秒 - Performance testing
 
 ---
 
-## Dependencies Summary
+## Dependencies Diagram
 
 ```
-Setup (T001-T012)
+Tests First (T197-T217) ⚠️ MUST FAIL FIRST
   ↓
-Tests (T013-T041) [Must FAIL before implementation]
+Backend Models (T218-T226) [9 models in parallel]
   ↓
-Backend Core (T042-T046)
+Database Indexes (T227-T235) [Sequential per model]
   ↓
-Backend Models (T047-T060)
+Backend Services (T236-T248) [Logic depends on models]
   ↓
-Backend Services (T061-T073)
+Backend Routers (T249-T273) [Endpoints depend on services]
   ↓
-Backend Routers (T074-T097)
+External Integrations (T274-T275) [Parallel]
   ↓
-Backend Integrations (T098-T100)
+Mobile Types (T276-T278) [Parallel]
   ↓
-Mobile Types (T101-T105)
+Mobile API Client (T279-T283) [Parallel, depends on types]
   ↓
-Mobile Services (T106-T121) [Parallel: API + Storage + Stores]
+Mobile Stores (T284-T287) [Parallel, depends on API client]
   ↓
-Mobile UI Components (T122-T144)
+Mobile Components (T288-T293) [Parallel, depends on stores]
   ↓
-Mobile Screens (T145-T160)
+Mobile Screens (T294-T302) [Sequential, depends on components]
   ↓
-Mobile Navigation (T161-T163)
+Native Integration (T303-T304) [Parallel]
   ↓
-E2E Tests & Polish (T164-T180)
+Navigation (T305) [Depends on screens]
+  ↓
+E2E Tests & Polish (T306-T315) [After all implementation]
 ```
 
 ---
 
 ## Parallel Execution Examples
 
-### 範例 1: Setup Phase (所有任務可平行)
+### 範例 1: Contract Tests (11 個測試可平行)
 
 ```bash
-# 同時建立 Backend 與 Mobile 專案結構
-Task: "建立 Backend 專案結構 api/ 目錄與子目錄"
-Task: "建立 Mobile 專案結構 app/ 目錄與子目錄"
-Task: "Backend: 初始化 Python 專案"
-Task: "Mobile: 初始化 Expo 專案"
+Task: "Friends Contract: 搜尋好友端點 - api/tests/contract/test_friends_search.py"
+Task: "Friends Contract: 好友邀請端點 - api/tests/contract/test_friends_invite.py"
+Task: "Social Contract: 好友動態牆 - api/tests/contract/test_social_feed.py"
+Task: "Challenges Contract: 創建挑戰賽 - api/tests/contract/test_challenges_create.py"
+Task: "Notifications Contract: 通知查詢與管理 - api/tests/contract/test_notifications.py"
+Task: "Leaderboard Contract: 好友排行榜 - api/tests/contract/test_leaderboard.py"
+Task: "Profiles Contract: 個人檔案公開化 - api/tests/contract/test_profiles.py"
 ```
 
-### 範例 2: Contract Tests (13 個測試可平行)
+### 範例 2: Backend Models (9 個 Models 可平行)
 
 ```bash
-# 同時寫所有 Contract Tests (必須在實作前完成)
-Task: "Auth Contract: 註冊端點 - api/tests/contract/test_auth_register.py"
-Task: "Auth Contract: 登入端點 - api/tests/contract/test_auth_login.py"
-Task: "Workouts Contract: 建立運動記錄 - api/tests/contract/test_workouts_create.py"
-Task: "Achievements Contract: 成就檢查 - api/tests/contract/test_achievements_check.py"
-Task: "Dashboards Contract: Widget CRUD - api/tests/contract/test_dashboards_widgets.py"
-Task: "Timeline Contract: 年度回顧生成 - api/tests/contract/test_timeline_review.py"
-# ... 共 13 個 Contract Tests
+Task: "Friendship Model - api/src/models/friendship.py"
+Task: "Activity Model - api/src/models/activity.py"
+Task: "Like Model - api/src/models/like.py"
+Task: "Comment Model - api/src/models/comment.py"
+Task: "Challenge Model - api/src/models/challenge.py"
+Task: "Participant Model - api/src/models/participant.py"
+Task: "Notification Model - api/src/models/notification.py"
+Task: "Leaderboard Model - api/src/models/leaderboard.py"
+Task: "BlockList Model - api/src/models/blocklist.py"
 ```
 
-### 範例 3: MongoDB Models (7 個 Models 可平行)
+### 範例 3: Mobile UI Components (6 個元件可平行)
 
 ```bash
-# 所有 Models 獨立檔案，可平行實作
-Task: "User Model - api/src/models/user.py"
-Task: "Workout Model - api/src/models/workout.py"
-Task: "Achievement Model - api/src/models/achievement.py"
-Task: "Dashboard Model - api/src/models/dashboard.py"
-Task: "Milestone Model - api/src/models/milestone.py"
-Task: "Annual Review Model - api/src/models/annual_review.py"
-Task: "Share Card Model - api/src/models/share_card.py"
-```
-
-### 範例 4: Widget Components (12 個 Widgets 可平行)
-
-```bash
-# 所有 Widget 元件獨立，可同時開發
-Task: "進度條 Widget - app/src/components/widgets/ProgressWidget.tsx"
-Task: "折線圖 Widget - app/src/components/widgets/LineChartWidget.tsx"
-Task: "長條圖 Widget - app/src/components/widgets/BarChartWidget.tsx"
-Task: "圓餅圖 Widget - app/src/components/widgets/PieChartWidget.tsx"
-Task: "數字卡片 Widget - app/src/components/widgets/StatCardWidget.tsx"
-# ... 共 12 個 Widget Components
-```
-
-### 範例 5: E2E Tests (3 個場景可平行)
-
-```bash
-# 所有 E2E 測試場景獨立，可同時執行
-Task: "E2E: 小美場景 (首次運動與慶祝) - app/__tests__/e2e/beginner.e2e.ts"
-Task: "E2E: 大衛場景 (客製化儀表板) - app/__tests__/e2e/advanced.e2e.ts"
-Task: "E2E: 艾莉場景 (年度回顧) - app/__tests__/e2e/longterm.e2e.ts"
+Task: "FriendListItem - app/src/components/social/FriendListItem.tsx"
+Task: "ActivityCard - app/src/components/social/ActivityCard.tsx"
+Task: "ChallengeCard - app/src/components/social/ChallengeCard.tsx"
+Task: "LeaderboardItem - app/src/components/social/LeaderboardItem.tsx"
+Task: "NotificationItem - app/src/components/social/NotificationItem.tsx"
+Task: "ShareCardPreview - app/src/components/social/ShareCardPreview.tsx"
 ```
 
 ---
 
 ## Validation Checklist
 
-**GATE: 檢查清單 (生成任務時已驗證)**
+**GATE: 檢查清單**
 
-- [x] 所有 contracts/ 契約檔案都有對應測試任務 (T013-T025, 共 13 個)
-- [x] 所有 data-model.md entities 都有 model 任務 (T047-T053, 共 7 個)
-- [x] 所有測試任務在實作任務之前 (T013-T041 → T042-T180)
+- [x] 所有 contracts/ 契約檔案都有對應測試任務 (T197-T207, 共 11 個)
+- [x] 所有新增 Collections 都有 model 任務 (T218-T226, 共 9 個)
+- [x] 所有測試任務在實作任務之前 (T197-T217 → T218-T315)
 - [x] 平行任務 [P] 確實獨立 (不同檔案、無依賴)
 - [x] 每個任務都指定確切檔案路徑
 - [x] 沒有任務修改與其他 [P] 任務相同的檔案
+- [x] 所有 API endpoints 都有 router 任務 (T249-T273, 25+ endpoints)
+- [x] 所有 service layer 邏輯都有對應任務 (T236-T248)
 
 ---
 
 ## Notes
 
-- **[P] 標記**: 表示可平行執行（不同檔案、無依賴關係）
-- **TDD 流程**: Phase 3.2 測試必須全部失敗後，才能進入 Phase 3.3/3.4 實作
-- **Commit 策略**: 每完成一個任務就 commit，保持版本歷史清晰
-- **效能驗證**: T168-T172 確保符合憲章要求 (API < 200ms, 動畫 60 FPS, 回顧 < 3 秒)
-- **免費方案優化**: 注意 MongoDB 512MB、Render 512MB RAM、R2 10GB 限制
-- **離線優先**: T112-T117 實作本地儲存與同步機制，確保離線可用
+- **[P] 標記**: 表示可平行執行 (不同檔案、無依賴關係)
+- **TDD 流程**: Phase 3.2 測試必須全部失敗後,才能進入 Phase 3.3/3.4 實作
+- **Commit 策略**: 每完成一個任務就 commit,保持版本歷史清晰
+- **效能驗證**: T307-T310, T315 確保符合憲章要求
+- **免費方案優化**: 注意 MongoDB 512MB、Render 512MB RAM、Firebase 免費方案限制
 
 ---
 
 **Based on**:
 - Constitution v1.0.0 (TDD NON-NEGOTIABLE)
-- plan.md (Technical Context & Project Structure)
-- data-model.md (7 Collections, 18 Indexes)
-- contracts/ (5 API Contract Files)
-- quickstart.md (3 User Scenarios)
+- plan.md (Phase 3 Technical Context & Project Structure)
+- spec.md (FR-036~050, Phase 3 User Scenarios)
+- data-model.md (9 個新 Collections 設計)
+- contracts/ (6 個新 API 契約檔案)
+- quickstart.md (珍妮場景 4)

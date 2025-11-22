@@ -1,0 +1,352 @@
+openapi: 3.0.3
+info:
+  title: MotionStory Profiles API
+  description: 個人公開檔案 API，支援檔案管理、隱私控制與 QR Code 生成
+  version: 1.0.0
+  contact:
+    name: MotionStory API Team
+
+servers:
+  - url: https://api.motionstory.com/api/v1
+    description: Production server
+  - url: http://localhost:8000/api/v1
+    description: Development server
+
+tags:
+  - name: Profiles
+    description: 個人檔案相關操作
+
+paths:
+  /profiles/me:
+    get:
+      tags:
+        - Profiles
+      summary: 取得個人檔案
+      description: 取得當前使用者的完整個人檔案
+      operationId: getMyProfile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 查詢成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    put:
+      tags:
+        - Profiles
+      summary: 更新個人檔案
+      description: |
+        更新個人檔案資訊
+        - 支援更新頭像、暱稱、自我介紹、運動標籤
+        - 支援隱私層級設定
+      operationId: updateMyProfile
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                display_name:
+                  type: string
+                  minLength: 1
+                  maxLength: 50
+                  description: 顯示名稱
+                avatar_url:
+                  type: string
+                  nullable: true
+                  description: 頭像 URL
+                bio:
+                  type: string
+                  maxLength: 100
+                  nullable: true
+                  description: 自我介紹
+                sport_tags:
+                  type: array
+                  items:
+                    type: string
+                  maxItems: 5
+                  description: 運動標籤（最多 5 個）
+                privacy_level:
+                  type: string
+                  enum: [public, friends_only, private]
+                  description: 隱私層級
+            example:
+              display_name: "Runner Jane"
+              bio: "馬拉松愛好者 🏃‍♀️"
+              sport_tags: ["跑步", "馬拉松", "健身"]
+              privacy_level: friends_only
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /profiles/{user_id}:
+    get:
+      tags:
+        - Profiles
+      summary: 查看他人檔案
+      description: |
+        查看指定使用者的公開檔案
+        - 根據隱私設定決定可見內容
+        - 公開: 所有人可查看
+        - 僅好友: 僅好友可查看完整資訊
+        - 私密: 僅顯示基本資訊（暱稱、頭像）
+      operationId: getUserProfile
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 查詢成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 無權限查看（隱私設定為私密且非好友）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /profiles/me/qrcode:
+    get:
+      tags:
+        - Profiles
+      summary: 取得個人 QR Code
+      description: |
+        生成個人 QR Code 用於快速加好友
+        - QR Code 包含使用者 ID
+        - 支援 PNG 或 SVG 格式
+      operationId: getMyQRCode
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [png, svg]
+            default: png
+          description: QR Code 格式
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 300
+            minimum: 100
+            maximum: 1000
+          description: QR Code 尺寸（像素）
+      responses:
+        '200':
+          description: 生成成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  qrcode_data:
+                    type: string
+                    description: QR Code 數據（Base64 編碼的圖片或 SVG 字串）
+                  qrcode_url:
+                    type: string
+                    description: QR Code 圖片 URL（可選，若後端存儲）
+                  format:
+                    type: string
+                  size:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /profiles/stats/{user_id}:
+    get:
+      tags:
+        - Profiles
+      summary: 取得使用者統計數據
+      description: |
+        取得指定使用者的運動統計數據
+        - 根據隱私設定決定可見內容
+      operationId: getUserStats
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 查詢成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserStats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 無權限查看統計數據
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Profile:
+      type: object
+      properties:
+        user_id:
+          type: string
+        display_name:
+          type: string
+        avatar_url:
+          type: string
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+          description: 自我介紹（最多 100 字）
+        sport_tags:
+          type: array
+          items:
+            type: string
+          description: 運動標籤（最多 5 個）
+        privacy_level:
+          type: string
+          enum: [public, friends_only, private]
+        stats:
+          $ref: '#/components/schemas/UserStats'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    PublicProfile:
+      type: object
+      properties:
+        user_id:
+          type: string
+        display_name:
+          type: string
+        avatar_url:
+          type: string
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+          description: 自我介紹（根據隱私設定可能為 null）
+        sport_tags:
+          type: array
+          items:
+            type: string
+          description: 運動標籤（根據隱私設定可能為空）
+        privacy_level:
+          type: string
+          enum: [public, friends_only, private]
+        is_friend:
+          type: boolean
+          description: 是否為好友
+        stats:
+          nullable: true
+          description: 統計數據（根據隱私設定可能為 null）
+          allOf:
+            - $ref: '#/components/schemas/UserStats'
+
+    UserStats:
+      type: object
+      properties:
+        total_workout_days:
+          type: integer
+          description: 總運動天數
+        total_distance:
+          type: number
+          description: 總距離（公里）
+        total_duration:
+          type: integer
+          description: 總時長（分鐘）
+        favorite_workout_type:
+          type: string
+          nullable: true
+          description: 最愛運動類型
+        achievement_count:
+          type: integer
+          description: 成就數量
+        current_streak:
+          type: integer
+          description: 當前連續天數
+        longest_streak:
+          type: integer
+          description: 最長連續天數
+        last_workout_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: 最後運動時間
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          nullable: true
+
+  responses:
+    BadRequest:
+      description: 請求參數錯誤
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: 未授權或 Token 無效
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: 資源不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

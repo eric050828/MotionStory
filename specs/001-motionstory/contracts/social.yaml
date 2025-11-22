@@ -1,0 +1,302 @@
+openapi: 3.0.3
+info:
+  title: MotionStory Social API
+  description: 社交互動 API，支援好友動態牆、按讚與留言功能
+  version: 1.0.0
+
+servers:
+  - url: https://api.motionstory.com/api/v1
+    description: Production
+  - url: http://localhost:8000/api/v1
+    description: Development
+
+tags:
+  - name: Social
+    description: 社交互動操作
+
+paths:
+  /social/feed:
+    get:
+      tags:
+        - Social
+      summary: 取得好友動態牆
+      description: |
+        取得好友的運動記錄、成就與挑戰動態
+        使用 Cursor-based Pagination，單次載入 20 筆
+        效能目標: < 200ms
+      operationId: getFeed
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+          description: 分頁 cursor（首次查詢不需提供）
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 50
+      responses:
+        '200':
+          description: 查詢成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  activities:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Activity'
+                  next_cursor:
+                    type: string
+                    nullable: true
+                  has_more:
+                    type: boolean
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /activities/{activity_id}/like:
+    post:
+      tags:
+        - Social
+      summary: 按讚動態
+      description: 對指定動態按讚，對方收到通知
+      operationId: likeActivity
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: activity_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          description: 按讚成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Like'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Social
+      summary: 取消按讚
+      description: 取消對指定動態的按讚
+      operationId: unlikeActivity
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: activity_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: 取消成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /activities/{activity_id}/comment:
+    post:
+      tags:
+        - Social
+      summary: 留言鼓勵
+      description: |
+        對好友動態留言（最多 200 字）
+        頻率限制: 1 分鐘最多 10 則留言
+        敏感詞彙自動過濾
+      operationId: addComment
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: activity_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                parent_id:
+                  type: string
+                  nullable: true
+                  description: 回覆特定留言的 ID
+      responses:
+        '201':
+          description: 留言成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          description: 超過留言頻率限制
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /activities/{activity_id}/comments:
+    get:
+      tags:
+        - Social
+      summary: 取得留言列表
+      description: 取得指定動態的所有留言
+      operationId: getComments
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: activity_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: 查詢成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  comments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Comment'
+                  total_count:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+
+  schemas:
+    Activity:
+      type: object
+      properties:
+        activity_id:
+          type: string
+        user_id:
+          type: string
+        user_name:
+          type: string
+        user_avatar:
+          type: string
+        activity_type:
+          type: string
+          enum: [workout, achievement, challenge]
+        reference_id:
+          type: string
+        content:
+          type: object
+        likes_count:
+          type: integer
+        comments_count:
+          type: integer
+        is_liked_by_me:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    Like:
+      type: object
+      properties:
+        like_id:
+          type: string
+        user_id:
+          type: string
+        activity_id:
+          type: string
+        liked_at:
+          type: string
+          format: date-time
+
+    Comment:
+      type: object
+      properties:
+        comment_id:
+          type: string
+        user_id:
+          type: string
+        user_name:
+          type: string
+        user_avatar:
+          type: string
+        content:
+          type: string
+        parent_id:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [normal, filtered, reported]
+        created_at:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+
+  responses:
+    BadRequest:
+      description: 請求錯誤
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: 未授權
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: 資源不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

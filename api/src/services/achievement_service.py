@@ -328,3 +328,227 @@ class AchievementService:
         ]
 
         return achievement_types
+
+    # T248: Scheduled Tasks - 稀有成就每日批次計算
+
+    async def batch_check_rare_achievements(self):
+        """
+        T248: 稀有成就每日批次計算 (APScheduler)
+
+        批次檢查並觸發稀有成就：
+        - 年度統計成就（累計距離、累計時間）
+        - 稀有連續天數成就（60天、90天、180天、365天）
+        - 社交互動成就（收到 X 個讚）
+
+        此方法應由 APScheduler 每日凌晨 2:00 觸發
+        """
+        # 取得所有活躍使用者
+        users_cursor = self.db.users.find({"deleted_at": None})
+        users = await users_cursor.to_list(length=10000)
+
+        for user in users:
+            user_id = str(user["_id"])
+
+            try:
+                # 檢查累計距離成就
+                await self._check_total_distance_achievements(user_id)
+
+                # 檢查累計時間成就
+                await self._check_total_duration_achievements(user_id)
+
+                # 檢查稀有連續天數成就
+                await self._check_rare_streak_achievements(user_id)
+
+                # 檢查社交互動成就
+                await self._check_social_achievements(user_id)
+
+            except Exception as e:
+                print(f"Failed to check rare achievements for user {user_id}: {e}")
+                continue
+
+    async def _check_total_distance_achievements(self, user_id: str):
+        """檢查累計距離成就"""
+        # 計算累計距離
+        pipeline = [
+            {"$match": {"user_id": ObjectId(user_id), "is_deleted": False}},
+            {"$group": {"_id": None, "total": {"$sum": "$distance_km"}}}
+        ]
+        result = await self.workouts_collection.aggregate(pipeline).to_list(1)
+        total_distance = result[0]["total"] if result else 0
+
+        # 累計距離里程碑
+        milestones = [
+            (100, "total_100km", "累計 100 公里", "fireworks"),
+            (500, "total_500km", "累計 500 公里", "fireworks"),
+            (1000, "total_1000km", "累計 1000 公里", "epic"),
+            (5000, "total_5000km", "累計 5000 公里", "epic"),
+        ]
+
+        for distance, achievement_type, title, level in milestones:
+            if total_distance >= distance:
+                await self._create_achievement_if_not_exists(
+                    user_id=user_id,
+                    achievement_type=achievement_type,
+                    title=title,
+                    description=f"累計運動距離達到 {distance} 公里",
+                    celebration_level=level,
+                    metadata={"total_distance_km": total_distance}
+                )
+
+    async def _check_total_duration_achievements(self, user_id: str):
+        """檢查累計時間成就"""
+        # 計算累計時間 (小時)
+        pipeline = [
+            {"$match": {"user_id": ObjectId(user_id), "is_deleted": False}},
+            {"$group": {"_id": None, "total": {"$sum": "$duration_minutes"}}}
+        ]
+        result = await self.workouts_collection.aggregate(pipeline).to_list(1)
+        total_minutes = result[0]["total"] if result else 0
+        total_hours = total_minutes / 60
+
+        # 累計時間里程碑
+        milestones = [
+            (50, "total_50hours", "累計 50 小時", "fireworks"),
+            (100, "total_100hours", "累計 100 小時", "fireworks"),
+            (500, "total_500hours", "累計 500 小時", "epic"),
+            (1000, "total_1000hours", "累計 1000 小時", "epic"),
+        ]
+
+        for hours, achievement_type, title, level in milestones:
+            if total_hours >= hours:
+                await self._create_achievement_if_not_exists(
+                    user_id=user_id,
+                    achievement_type=achievement_type,
+                    title=title,
+                    description=f"累計運動時間達到 {hours} 小時",
+                    celebration_level=level,
+                    metadata={"total_hours": total_hours}
+                )
+
+    async def _check_rare_streak_achievements(self, user_id: str):
+        """檢查稀有連續天數成就"""
+        # 計算當前連續天數
+        streak = await self._calculate_current_streak(user_id)
+
+        # 稀有連續天數里程碑
+        milestones = [
+            (60, "streak_60", "連續 60 天", "epic"),
+            (90, "streak_90", "連續 90 天", "epic"),
+            (180, "streak_180", "連續 180 天", "epic"),
+            (365, "streak_365", "連續一整年", "epic"),
+        ]
+
+        for days, achievement_type, title, level in milestones:
+            if streak >= days:
+                await self._create_achievement_if_not_exists(
+                    user_id=user_id,
+                    achievement_type=achievement_type,
+                    title=title,
+                    description=f"連續運動 {days} 天",
+                    celebration_level=level,
+                    metadata={"streak_days": streak}
+                )
+
+    async def _check_social_achievements(self, user_id: str):
+        """檢查社交互動成就"""
+        # 計算收到的總按讚數
+        pipeline = [
+            {"$match": {"user_id": ObjectId(user_id)}},
+            {"$lookup": {
+                "from": "likes",
+                "localField": "_id",
+                "foreignField": "activity_id",
+                "as": "likes"
+            }},
+            {"$project": {"like_count": {"$size": "$likes"}}},
+            {"$group": {"_id": None, "total_likes": {"$sum": "$like_count"}}}
+        ]
+
+        result = await self.db.activities.aggregate(pipeline).to_list(1)
+        total_likes = result[0]["total_likes"] if result else 0
+
+        # 按讚里程碑
+        milestones = [
+            (10, "likes_10", "人氣新星", "basic"),
+            (50, "likes_50", "社群達人", "fireworks"),
+            (100, "likes_100", "運動明星", "fireworks"),
+            (500, "likes_500", "超級巨星", "epic"),
+        ]
+
+        for likes, achievement_type, title, level in milestones:
+            if total_likes >= likes:
+                await self._create_achievement_if_not_exists(
+                    user_id=user_id,
+                    achievement_type=achievement_type,
+                    title=title,
+                    description=f"累計獲得 {likes} 個讚",
+                    celebration_level=level,
+                    metadata={"total_likes": total_likes}
+                )
+
+    async def _calculate_current_streak(self, user_id: str) -> int:
+        """計算當前連續天數"""
+        today = datetime.now(timezone.utc).date()
+
+        # 取得所有運動記錄的日期
+        workouts = await self.workouts_collection.find({
+            "user_id": ObjectId(user_id),
+            "is_deleted": False
+        }).sort("start_time", -1).to_list(length=1000)
+
+        if not workouts:
+            return 0
+
+        # 提取日期
+        dates = set()
+        for workout in workouts:
+            dates.add(workout["start_time"].date())
+
+        # 計算連續天數
+        streak = 0
+        current_date = today
+
+        while current_date in dates:
+            streak += 1
+            current_date -= timedelta(days=1)
+
+        # 如果今天還沒運動，從昨天開始算
+        if today not in dates:
+            streak = 0
+            current_date = today - timedelta(days=1)
+            while current_date in dates:
+                streak += 1
+                current_date -= timedelta(days=1)
+
+        return streak
+
+    async def _create_achievement_if_not_exists(
+        self,
+        user_id: str,
+        achievement_type: str,
+        title: str,
+        description: str,
+        celebration_level: str,
+        metadata: dict = None
+    ):
+        """如果成就不存在則建立"""
+        existing = await self.achievements_collection.find_one({
+            "user_id": ObjectId(user_id),
+            "achievement_type": achievement_type
+        })
+
+        if existing:
+            return None
+
+        achievement = {
+            "user_id": ObjectId(user_id),
+            "achievement_type": achievement_type,
+            "title": title,
+            "description": description,
+            "celebration_level": celebration_level,
+            "achieved_at": datetime.now(timezone.utc),
+            "metadata": metadata or {}
+        }
+
+        await self.achievements_collection.insert_one(achievement)
+        return achievement

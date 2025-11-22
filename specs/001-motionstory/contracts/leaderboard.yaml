@@ -1,0 +1,259 @@
+openapi: 3.0.3
+info:
+  title: MotionStory Leaderboard API
+  description: 好友排行榜 API，支援多週期與多指標的排名查詢
+  version: 1.0.0
+  contact:
+    name: MotionStory API Team
+
+servers:
+  - url: https://api.motionstory.com/api/v1
+    description: Production server
+  - url: http://localhost:8000/api/v1
+    description: Development server
+
+tags:
+  - name: Leaderboard
+    description: 好友排行榜相關操作
+
+paths:
+  /leaderboard:
+    get:
+      tags:
+        - Leaderboard
+      summary: 取得好友排行榜
+      description: |
+        取得好友排行榜數據
+        - 僅顯示好友排名（不包含全平台陌生人）
+        - 支援多種排行週期與排名指標
+        - 每日批次更新（凌晨 2:00）
+      operationId: getLeaderboard
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [week, month, year, all_time]
+          description: 排行週期（本週/本月/本年/歷史總榜）
+        - name: metric
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [total_distance, total_duration, workout_days, achievement_count]
+          description: 排名指標
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        '200':
+          description: 查詢成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  leaderboard:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LeaderboardEntry'
+                  my_rank:
+                    type: object
+                    nullable: true
+                    description: 當前使用者排名資訊
+                    properties:
+                      rank:
+                        type: integer
+                      value:
+                        type: number
+                      gap_to_next:
+                        type: number
+                        nullable: true
+                        description: 距離上一名的差距
+                  period:
+                    type: string
+                  metric:
+                    type: string
+                  period_start:
+                    type: string
+                    format: date-time
+                    description: 統計週期開始時間
+                  period_end:
+                    type: string
+                    format: date-time
+                    description: 統計週期結束時間
+                  last_updated:
+                    type: string
+                    format: date-time
+                    description: 排名最後更新時間
+                  total_count:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /leaderboard/my-stats:
+    get:
+      tags:
+        - Leaderboard
+      summary: 取得個人排行統計
+      description: |
+        取得當前使用者在各週期與指標的排名概況
+        - 一次查詢獲得所有排行榜的個人數據
+      operationId: getMyLeaderboardStats
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 查詢成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stats:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        period:
+                          type: string
+                          enum: [week, month, year, all_time]
+                        metric:
+                          type: string
+                          enum: [total_distance, total_duration, workout_days, achievement_count]
+                        rank:
+                          type: integer
+                          nullable: true
+                        value:
+                          type: number
+                        total_participants:
+                          type: integer
+                  is_opted_out:
+                    type: boolean
+                    description: 是否已退出排行榜
+                  last_updated:
+                    type: string
+                    format: date-time
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /leaderboard/opt-out:
+    post:
+      tags:
+        - Leaderboard
+      summary: 退出排行榜
+      description: |
+        退出好友排行榜功能
+        - 個人數據將不顯示在好友的排行榜中
+        - 仍可查看好友排行榜
+      operationId: optOutLeaderboard
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 退出成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /leaderboard/opt-in:
+    post:
+      tags:
+        - Leaderboard
+      summary: 重新加入排行榜
+      description: 取消退出狀態，重新顯示在好友排行榜中
+      operationId: optInLeaderboard
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 加入成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    LeaderboardEntry:
+      type: object
+      properties:
+        rank:
+          type: integer
+          description: 排名（1-based）
+        user_id:
+          type: string
+        display_name:
+          type: string
+        avatar_url:
+          type: string
+          nullable: true
+        value:
+          type: number
+          description: 排名指標數值（根據 metric 而定）
+        unit:
+          type: string
+          description: 數值單位（km/分鐘/天/個）
+        is_me:
+          type: boolean
+          description: 是否為當前使用者
+        badge:
+          type: string
+          nullable: true
+          enum: [top1, top3, top10]
+          description: 排名徽章（第1名/前3名/前10名）
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          nullable: true
+
+  responses:
+    BadRequest:
+      description: 請求參數錯誤
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: 未授權或 Token 無效
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: 資源不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

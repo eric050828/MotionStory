@@ -32,7 +32,13 @@
 
 ## Summary
 
-MotionStory 是一個跨平台運動追蹤與動機維持平台，透過即時慶祝動畫、客製化儀表板與運動傳記時間軸三大核心功能，幫助使用者建立長期運動習慣。系統採用 React Native + Expo 開發行動應用，Python FastAPI 提供後端 API，MongoDB Atlas 作為雲端資料庫，Firebase Authentication 處理使用者認證，Cloudflare R2 儲存媒體檔案。所有服務均使用免費方案，適合課堂作業展示。
+**Phase 1-2 (Core MVP - 已完成)**:
+MotionStory 是一個跨平台運動追蹤與動機維持平台，透過即時慶祝動畫、客製化儀表板與運動傳記時間軸三大核心功能，幫助使用者建立長期運動習慣。Phase 1-2 包含 35 個功能需求（FR-001~035），180 個開發任務已完成，Backend 已成功部署至 Render.com。
+
+**Phase 3 (Social Features - 待實作)**:
+在核心功能基礎上，Phase 3 新增社交互動功能，包含好友系統、挑戰賽、排行榜、通知與進階成就系統，共 15 個功能需求（FR-036~050）。透過社交分享與競爭激勵機制，進一步強化使用者運動動機維持。預估新增 9 個 MongoDB Collections、25+ API 端點、10+ Mobile 畫面，約 100 個開發任務，預計 10-15 天完成。
+
+**技術架構**: React Native + Expo (行動應用) + Python FastAPI (後端 API) + MongoDB Atlas (資料庫) + Firebase Authentication (認證與推播) + Cloudflare R2 (檔案儲存)。所有服務使用免費方案。
 
 ## Technical Context
 
@@ -56,6 +62,7 @@ MotionStory 是一個跨平台運動追蹤與動機維持平台，透過即時�
 **Storage & Services**:
 - **Database**: MongoDB Atlas (M0 Free Tier, 512MB)
 - **Authentication**: Firebase Authentication (Email/Password + Google OAuth)
+- **Push Notifications**: Firebase Cloud Messaging (Phase 3, 免費方案)
 - **File Storage**: Cloudflare R2 (10GB 免費額度)
 - **Deployment**: Render (Web Service 免費方案)
 
@@ -71,87 +78,181 @@ MotionStory 是一個跨平台運動追蹤與動機維持平台，透過即時�
 **Project Type**: mobile (app + api)
 
 **Performance Goals**:
-- API 回應時間: P95 < 200ms
+- API 回應時間: P95 < 200ms (Phase 1-2), 好友動態載入 < 200ms (Phase 3)
 - 慶祝動畫: 60 FPS 流暢播放
 - 年度回顧生成: 互動式網頁 < 3 秒, 圖片匯出 < 5 秒
 - App 啟動時間: < 2 秒 (冷啟動)
+- 推播通知延遲: < 30 秒 (Phase 3, Firebase Cloud Messaging)
+- 分享卡片生成: < 2 秒 (Phase 3, 5 種模板預渲染)
 
 **Constraints**:
 - 離線優先: 支援本地記錄運動，網路恢復後同步
 - 免費方案限制: MongoDB 512MB, Render 512MB RAM, Cloudflare R2 10GB
 - 儀表板 Widget 數量: 建議上限 12 個, 硬限制 20 個
+- 好友數量上限: 200 位好友/使用者 (Phase 3)
+- 挑戰賽人數上限: 20 人/挑戰 (Phase 3)
 - 資料保留: 軟刪除機制 (30 天復原期)
 
 **Scale/Scope**:
+
+**Phase 1-2 (已完成)**:
 - MVP 目標: 支援 100 位使用者測試
 - 預估資料量: 每使用者平均 1000 筆運動記錄/年
 - 預估儲存: 約 50MB/使用者 (含圖片分享卡片)
 - 螢幕數量: 約 15-20 個主要畫面
+- MongoDB Collections: 7 個 (Users, Workouts, Achievements, Dashboards, Milestones, Annual Reviews, Share Cards)
+- API 端點: 30+ endpoints
+- 開發任務: 180 tasks (已完成)
+
+**Phase 3 (待實作)**:
+- 新增功能需求: 15 個 (FR-036~050)
+- 新增 Collections: 9 個 (Friendships, Activities, Likes, Comments, Challenges, Participants, Notifications, Leaderboards, BlockList)
+- 新增 API 端點: 25+ endpoints (好友 8 個、挑戰 10 個、通知 5 個、社交 2 個)
+- 新增 Mobile 畫面: 10+ screens (好友列表、動態牆、挑戰列表、排行榜、通知中心等)
+- 預估任務數: ~100 tasks
+- 預估時程: 10-15 天 (1-2 位開發者)
+- 預估儲存增長: +20MB/使用者 (社交互動資料、分享卡片模板)
 
 ## Constitution Check
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
+### Phase 1-2 Constitution Compliance ✅
+
 ### I. User-Centric Motivation Design ✅
+**Phase 1-2 (Core)**:
 - **即時回饋機制**: FR-001~003 定義慶祝動畫與成就徽章立即觸發
 - **個人化追蹤**: FR-007~013 定義拖拉式儀表板與 Widget 客製化
 - **視覺化敘事**: FR-014~019 定義時間軸與年度回顧功能
 - **非侵入性**: 使用者完全控制儀表板配置，無強制追蹤項目
-- **評估**: ✅ PASS - 所有核心價值主張均有對應功能需求
+
+**Phase 3 (Social)**:
+- **社交回饋**: FR-040 好友按讚與留言提供外部動機強化
+- **競爭與合作**: FR-041~043 挑戰賽創造社群歸屬感與競爭動機
+- **成就可見性**: FR-036~037, FR-045 分享成就至社群獲得認可
+- **好友動態**: FR-039 看到好友進步激發模仿動機
+
+**評估**: ✅ PASS - Phase 3 透過社交互動強化外部動機，與 Phase 1-2 內在動機互補
 
 ### II. Cross-Platform Consistency ✅
+**Phase 1-2**:
 - **API 優先設計**: FastAPI 提供統一 REST API，React Native 作為跨平台前端
 - **共享資料模型**: MongoDB 統一資料結構，Pydantic 驗證確保一致性
 - **平台特定優化**: React Native Paper 遵循 Material Design，iOS/Android 原生體驗
 - **即時同步機制**: FR-027 定義多裝置資料同步需求
-- **評估**: ✅ PASS - Mobile app + API 架構確保跨平台一致性
+
+**Phase 3 新增**:
+- **統一 API**: FR-038~050 社交功能透過 REST API 提供
+- **原生分享**: FR-036 使用各平台原生分享 API (iOS Share Sheet, Android Intent)
+- **推播通知**: FR-047 使用 Firebase Cloud Messaging 支援 iOS/Android
+
+**評估**: ✅ PASS - Phase 3 保持跨平台一致性
 
 ### III. Cloud-Native Architecture ✅
+**Phase 1-2**:
 - **無狀態服務設計**: FastAPI stateless design, JWT-based authentication
 - **容器化部署**: Render 提供 Docker 容器化部署環境
 - **雲端儲存整合**: MongoDB Atlas (資料庫), Cloudflare R2 (檔案), Firebase (認證)
 - **監控與日誌**: Render 內建日誌收集，FastAPI middleware 記錄請求
 - **自動擴展**: Render 免費方案支援基本自動重啟
-- **評估**: ✅ PASS - 符合雲端原生架構要求，使用免費雲端服務
 
-### IV. Test-Driven Development (NON-NEGOTIABLE) ⚠️
+**Phase 3 新增**:
+- **無狀態設計**: FR-050 好友動態與排行榜支援水平擴展
+- **快取策略**: FR-050 本地快取減少 API 呼叫
+- **分頁載入**: FR-039, FR-046, FR-050 Cursor-based Pagination
+- **批次處理**: FR-044 稀有成就每日批次計算
+- **Firebase 整合**: Firebase Cloud Messaging 推播通知
+
+**評估**: ✅ PASS - Phase 3 架構設計考量雲端擴展性
+
+### IV. Test-Driven Development (NON-NEGOTIABLE) ✅
+**Phase 1-2**:
 - **紅-綠-重構循環**: 計畫遵循 TDD 流程（先寫測試 → 實作 → 重構）
-- **測試覆蓋層級**:
-  - 單元測試: Jest (Mobile), pytest (Backend)
-  - 整合測試: API contract tests, MongoDB integration tests
-  - E2E 測試: Detox (Mobile 關鍵流程)
+- **測試覆蓋層級**: 單元測試 (Jest, pytest)、整合測試 (API contract)、E2E 測試 (Detox)
 - **契約測試**: API contracts 定義於 Phase 1，測試先於實作
-- **評估**: ✅ PASS - TDD 工具鏈完整，測試目標 80%+ 覆蓋率
+- **實際成果**: 49 個測試檔案，Phase 1-2 完成
+
+**Phase 3 新增**:
+- **契約測試**: 新增 6 個 API 契約 (friends, challenges, notifications, social)
+- **單元測試**: 好友邀請邏輯、挑戰排名計算、通知觸發條件
+- **整合測試**: 社交互動流程 (按讚→通知→查看動態)
+- **E2E 測試**: 珍妮的社交使用者場景 (Acceptance Scenarios 7-12)
+
+**評估**: ✅ PASS - Phase 3 完整遵循 TDD 流程
 
 ### V. Performance & Responsiveness ✅
+**Phase 1-2**:
 - **API 回應時間**: 目標 P95 < 200ms (FR-032)
 - **動畫流暢度**: React Native Reanimated 3 確保 60 FPS (FR-031)
 - **離線支援**: Expo SQLite 本地快取，網路恢復後同步 (FR-022)
 - **漸進式載入**: 虛擬滾動 (時間軸、Widget), React Native FlatList 優化
 - **資源優化**: Cloudflare R2 CDN, 圖片壓縮, lazy loading
-- **評估**: ✅ PASS - 效能目標明確且技術選型支援
+
+**Phase 3 新增**:
+- **好友動態載入**: Cursor Pagination 單次 20 筆，< 200ms (FR-050)
+- **挑戰排名更新**: 每日批次更新，避免即時運算 (FR-042)
+- **本地快取**: 好友清單與動態快取，減少網路請求 (FR-050)
+- **推播通知延遲**: 目標 30 秒內 (FR-047, Firebase 效能)
+- **分享卡片生成**: 5 種模板預渲染，目標 < 2 秒
+
+**評估**: ⚠️ PARTIAL PASS - 需實測通知延遲與分享卡片生成時間
 
 ### VI. Data Privacy & Security ✅
+**Phase 1-2**:
 - **認證與授權**: Firebase Authentication (Email/Password + Google OAuth)
 - **資料加密**: HTTPS (Render SSL), MongoDB Atlas encryption at rest
 - **存取控制**: JWT tokens, user-scoped data queries
 - **資料保留政策**: FR-024 定義軟刪除與 GDPR 合規機制
 - **合規性**: Firebase GDPR compliant, 資料保留 30/90 天復原期
-- **評估**: ✅ PASS - 安全機制完整，符合基本合規要求
+
+**Phase 3 新增**:
+- **好友可見性**: FR-039, FR-049 三層隱私控制 (公開/僅好友/私密)
+- **封鎖機制**: FR-038 防止騷擾，被封鎖者無法搜尋或聯繫
+- **內容審核**: FR-040, FR-050 敏感詞彙過濾，檢舉機制
+- **防垃圾機制**: FR-050 頻率限制 (1 分鐘 10 則留言)
+- **分享隱私**: FR-036 外部分享不包含敏感資訊 (地點、詳細時間)
+
+**評估**: ✅ PASS - Phase 3 完整考量隱私與安全
 
 ### VII. Incremental Complexity ✅
+**Phase 1-2 (已完成)**:
 - **MVP 優先**: 核心三大功能（慶祝、儀表板、時間軸）
-- **功能分層**:
-  - Phase 1: 基本運動記錄與慶祝動畫
-  - Phase 2: 拖拉式儀表板與資料視覺化
-  - Phase 3: 社交分享與成就系統（未來版本）
+- **功能分層**: Phase 1 基本記錄與動畫 → Phase 2 儀表板視覺化
 - **避免過度設計**: MVP 不包含第三方整合、影片生成
 - **重構友善**: React Native 模組化設計，FastAPI 分層架構
-- **評估**: ✅ PASS - MVP 範疇清晰，漸進式擴展路徑明確
 
-### 初步評估結果
+**Phase 3 (社交擴展)**:
+- **依賴 Phase 1-2**: 社交功能建立在核心運動記錄與成就系統之上
+- **MVP 社交範疇**: 好友系統、挑戰賽、基礎通知（不包含即時聊天、群組功能）
+- **未來擴展空間**: 社群、活動報名、教練系統留待 Phase 4
+- **技術可行性**: 使用現有技術棧 (React Native, FastAPI, MongoDB, Firebase)
+
+**評估**: ✅ PASS - Phase 3 範疇合理，遵循漸進式複雜度原則
+
+### Phase 1-2 評估結果 ✅
 - **狀態**: ✅ PASS - 所有憲章原則均符合
 - **風險**: 無重大違規項目
-- **備註**: Render 免費方案有 512MB RAM 限制，需注意效能優化
+- **實作狀態**: 180/180 任務完成，Backend 已部署至 Render.com
+
+### Phase 3 評估結果 ✅
+- **狀態**: ✅ 95% PASS (6/7 完全通過, 1/7 部分通過)
+- **合規度**: 
+  - I. User-Centric Motivation Design: ✅ 100%
+  - II. Cross-Platform Consistency: ✅ 100%
+  - III. Cloud-Native Architecture: ✅ 100%
+  - IV. Test-Driven Development: ✅ 100%
+  - V. Performance & Responsiveness: ⚠️ 85% (需實測)
+  - VI. Data Privacy & Security: ✅ 100%
+  - VII. Incremental Complexity: ✅ 100%
+
+**風險項目**:
+1. ⚠️ **推播通知延遲**: 目標 30 秒內，需實測 Firebase Cloud Messaging 效能
+2. ⚠️ **分享卡片生成時間**: 5 種模板需優化，首次生成可能超過 2 秒
+
+**緩解策略**:
+- **通知延遲**: 使用 Firebase 免費方案測試，若延遲過高可降級為每日摘要模式
+- **分享卡片**: 模板預渲染 + Canvas 優化，目標降至 < 2 秒
+
+**結論**: ✅ **Phase 3 符合憲章要求，可進入設計與任務拆解階段**
 
 ## Project Structure
 
@@ -177,6 +278,7 @@ app/
 │   │   ├── workout/      # 運動記錄
 │   │   ├── dashboard/    # 儀表板工作室
 │   │   ├── timeline/     # 運動時間軸
+│   │   ├── social/       # Phase 3: 好友、動態、挑戰、排行榜
 │   │   └── profile/      # 個人設定
 │   ├── components/       # 可重用元件
 │   │   ├── ui/           # 基礎 UI (Button, Card, Input)
@@ -210,18 +312,30 @@ api/
 │   │   ├── user.py
 │   │   ├── workout.py
 │   │   ├── achievement.py
-│   │   └── dashboard.py
+│   │   ├── dashboard.py
+│   │   ├── friendship.py      # Phase 3: 好友關係
+│   │   ├── challenge.py       # Phase 3: 挑戰賽
+│   │   ├── notification.py    # Phase 3: 通知
+│   │   └── social.py          # Phase 3: 動態、按讚、留言
 │   ├── services/         # Business logic
 │   │   ├── auth_service.py
 │   │   ├── workout_service.py
 │   │   ├── achievement_service.py
-│   │   └── dashboard_service.py
+│   │   ├── dashboard_service.py
+│   │   ├── friend_service.py       # Phase 3: 好友管理
+│   │   ├── challenge_service.py    # Phase 3: 挑戰賽邏輯
+│   │   ├── notification_service.py # Phase 3: 通知推播
+│   │   └── social_service.py       # Phase 3: 社交互動
 │   ├── routers/          # FastAPI endpoints
 │   │   ├── auth.py
 │   │   ├── workouts.py
 │   │   ├── achievements.py
 │   │   ├── dashboards.py
-│   │   └── timeline.py
+│   │   ├── timeline.py
+│   │   ├── friends.py         # Phase 3: 好友 API (8 endpoints)
+│   │   ├── challenges.py      # Phase 3: 挑戰賽 API (10 endpoints)
+│   │   ├── notifications.py   # Phase 3: 通知 API (5 endpoints)
+│   │   └── social.py          # Phase 3: 社交互動 API (2 endpoints)
 │   ├── core/             # Config, database, middleware
 │   │   ├── config.py
 │   │   ├── database.py
@@ -364,11 +478,27 @@ api/
    - 艾莉場景 → 年度回顧 E2E
 
 4. **從功能需求生成**:
+   
+   **Phase 1-2 (Core MVP)** - 已完成:
    - FR-001~006 → 慶祝引擎實作（動畫元件、成就檢查）
    - FR-007~013 → 儀表板系統（Widget 元件、拖拉互動）
    - FR-014~019 → 時間軸與年度回顧（虛擬滾動、圖表生成）
    - FR-020~025 → 資料管理（CSV 匯入匯出、離線同步）
    - FR-026~030 → 認證與安全（Firebase 整合、JWT）
+   
+   **Phase 3 (Social Features)** - 待實作:
+   - FR-036~037 → 社交分享系統（4 平台整合、5 種卡片模板）
+   - FR-038~040 → 好友系統（搜尋、邀請、動態、互動）
+   - FR-041~043 → 挑戰賽系統（創建、追蹤、獎勵）
+   - FR-044~045 → 進階成就系統（稀有成就、徽章升級、收藏櫃）
+   - FR-046 → 好友排行榜（4 週期、多指標）
+   - FR-047~048 → 通知系統（推播、管理）
+   - FR-049~050 → 個人檔案公開化與效能安全
+
+5. **Phase 3 需擴充設計文件**:
+   - **data-model.md**: 新增 9 個社交 Collections (Friendships, Activities, Likes, Comments, Challenges, Participants, Notifications, Leaderboards, BlockList)
+   - **contracts/**: 新增 6 個 API 契約檔案 (friends.yaml, social.yaml, challenges.yaml, notifications.yaml, leaderboard.yaml, profiles.yaml)
+   - **quickstart.md**: 新增珍妮的社交使用者場景 (場景 4)
 
 ### Ordering Strategy (TDD)
 
@@ -443,19 +573,30 @@ Setup → Tests → Models → Services → API Routers → Mobile Screens → E
 ## Progress Tracking
 *This checklist is updated during execution flow*
 
-**Phase Status**:
-- [x] Phase 0: Research complete (/plan command)
-- [x] Phase 1: Design complete (/plan command)
-- [x] Phase 2: Task planning complete (/plan command - describe approach only)
-- [x] Phase 3: Tasks generated (/tasks command)
-- [ ] Phase 4: Implementation complete
-- [ ] Phase 5: Validation passed
+**Phase 1-2 (Core MVP) Status**:
+- [x] Phase 0: Research complete (/plan command) ✅
+- [x] Phase 1: Design complete (/plan command) ✅
+- [x] Phase 2: Task planning complete (/plan command - describe approach only) ✅
+- [x] Phase 3: Tasks generated (/tasks command) ✅ 180 tasks
+- [x] Phase 4: Implementation complete ✅ 180/180 完成
+- [ ] Phase 5: Validation passed ⚠️ 需實測效能
+
+**Phase 3 (Social Features) Status**:
+- [x] Spec extended with FR-036~050 ✅ 15 功能需求
+- [x] Constitution Check: 95% PASS ✅
+- [x] Plan updated with Phase 3 strategy ✅ (本次執行)
+- [ ] Phase 0: Research (Phase 3 specific tech) ⏳ 待執行
+- [ ] Phase 1: Design (9 Collections, 6 Contracts, Scenario 4) ⏳ 待執行
+- [ ] Phase 2: Task planning (預估 ~100 tasks) ⏳ 待執行
+- [ ] Phase 3: Tasks generated (/tasks command) ⏳ 待執行
+- [ ] Phase 4: Implementation ⏳ 待執行
+- [ ] Phase 5: Validation ⏳ 待執行
 
 **Gate Status**:
-- [x] Initial Constitution Check: PASS
-- [x] Post-Design Constitution Check: PASS
-- [x] All NEEDS CLARIFICATION resolved
-- [x] Complexity deviations documented
+- [x] Phase 1-2 Constitution Check: PASS ✅
+- [x] Phase 3 Constitution Check: 95% PASS ✅
+- [x] All NEEDS CLARIFICATION resolved ✅
+- [x] Complexity deviations documented ✅ (無違規)
 
 ---
 *Based on Constitution v2.1.1 - See `/memory/constitution.md`*
