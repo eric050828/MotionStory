@@ -167,7 +167,7 @@ class MongoDB:
         await db.comments.create_index(
             [("parent_id", 1)],
             name="idx_parent_id",
-            partialFilterExpression={"parent_id": {"$ne": None}}
+            partialFilterExpression={"parent_id": {"$exists": True, "$type": "objectId"}}
         )
 
         # T231: Challenges collection indexes
