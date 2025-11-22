@@ -1,0 +1,497 @@
+openapi: 3.0.3
+info:
+  title: MotionStory Challenges API
+  description: 挑戰賽系統 API，支援創建運動挑戰、即時追蹤進度與排名管理
+  version: 1.0.0
+  contact:
+    name: MotionStory API Team
+
+servers:
+  - url: https://api.motionstory.com/api/v1
+    description: Production server
+  - url: http://localhost:8000/api/v1
+    description: Development server
+
+tags:
+  - name: Challenges
+    description: 挑戰賽系統相關操作
+
+paths:
+  /challenges:
+    post:
+      tags:
+        - Challenges
+      summary: 創建運動挑戰賽
+      description: |
+        創建新的運動挑戰賽
+        - 挑戰類型: 總距離、總時長、連續天數、特定運動類型
+        - 時間限制: 最短 3 天、最長 90 天
+        - 參與人數: 最多 20 人
+      operationId: createChallenge
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - challenge_type
+                - target_value
+                - start_date
+                - end_date
+              properties:
+                challenge_type:
+                  type: string
+                  enum: [total_distance, total_duration, consecutive_days, specific_workout_type]
+                  description: 挑戰類型
+                target_value:
+                  type: number
+                  description: 目標數值（距離單位km、時間單位分鐘、天數）
+                start_date:
+                  type: string
+                  format: date-time
+                  description: 開始日期
+                end_date:
+                  type: string
+                  format: date-time
+                  description: 結束日期（最短3天、最長90天）
+                workout_type:
+                  type: string
+                  nullable: true
+                  description: 特定運動類型（當challenge_type為specific_workout_type時必填）
+                privacy:
+                  type: string
+                  enum: [public, private]
+                  default: private
+                  description: 隱私設定
+                invited_users:
+                  type: array
+                  items:
+                    type: string
+                  maxItems: 20
+                  description: 邀請的好友 ID 列表
+            example:
+              challenge_type: total_distance
+              target_value: 100
+              start_date: "2025-11-10T00:00:00Z"
+              end_date: "2025-11-17T23:59:59Z"
+              privacy: private
+              invited_users: ["507f1f77bcf86cd799439011", "507f1f77bcf86cd799439012"]
+      responses:
+        '201':
+          description: 挑戰創建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Challenge'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          description: 超過創建頻率限制
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      tags:
+        - Challenges
+      summary: 取得挑戰賽清單
+      description: 取得使用者創建或參與的挑戰賽清單
+      operationId: getChallenges
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, completed, upcoming]
+            default: active
+          description: 挑戰狀態篩選
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [creator, participant, all]
+            default: all
+          description: 角色篩選
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        '200':
+          description: 查詢成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  challenges:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ChallengeListItem'
+                  total_count:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /challenges/{challenge_id}:
+    get:
+      tags:
+        - Challenges
+      summary: 取得挑戰賽詳情
+      description: 取得指定挑戰賽的完整資訊與參與者排名
+      operationId: getChallengeDetail
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: challenge_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 查詢成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChallengeDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Challenges
+      summary: 刪除挑戰賽
+      description: 刪除指定挑戰賽（僅創建者可操作，挑戰開始後無法刪除）
+      operationId: deleteChallenge
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: challenge_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: 刪除成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 權限不足或挑戰已開始
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /challenges/{challenge_id}/join:
+    post:
+      tags:
+        - Challenges
+      summary: 加入挑戰賽
+      description: |
+        加入指定挑戰賽
+        - 僅公開挑戰或被邀請的使用者可加入
+        - 挑戰開始後無法加入
+        - 參與人數上限 20 人
+      operationId: joinChallenge
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: challenge_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 加入成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChallengeParticipant'
+        '400':
+          description: 挑戰已開始或已滿員
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 無權限加入（私密挑戰且未被邀請）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /challenges/{challenge_id}/leave:
+    post:
+      tags:
+        - Challenges
+      summary: 退出挑戰賽
+      description: |
+        退出指定挑戰賽
+        - 退出後無法重新加入
+        - 不影響其他參與者
+      operationId: leaveChallenge
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: challenge_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 退出成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /challenges/{challenge_id}/leaderboard:
+    get:
+      tags:
+        - Challenges
+      summary: 取得挑戰賽排行榜
+      description: |
+        取得挑戰賽即時排名
+        - 每日批次更新（凌晨 2:00）
+        - 依挑戰目標排序參與者
+      operationId: getChallengeLeaderboard
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: challenge_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 查詢成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  challenge_id:
+                    type: string
+                  challenge_type:
+                    type: string
+                  target_value:
+                    type: number
+                  participants:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LeaderboardEntry'
+                  last_updated:
+                    type: string
+                    format: date-time
+                    description: 排名最後更新時間
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Challenge:
+      type: object
+      properties:
+        challenge_id:
+          type: string
+        creator_id:
+          type: string
+        challenge_type:
+          type: string
+          enum: [total_distance, total_duration, consecutive_days, specific_workout_type]
+        target_value:
+          type: number
+        start_date:
+          type: string
+          format: date-time
+        end_date:
+          type: string
+          format: date-time
+        workout_type:
+          type: string
+          nullable: true
+        privacy:
+          type: string
+          enum: [public, private]
+        status:
+          type: string
+          enum: [upcoming, active, completed]
+        participant_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    ChallengeListItem:
+      type: object
+      properties:
+        challenge_id:
+          type: string
+        challenge_type:
+          type: string
+        target_value:
+          type: number
+        start_date:
+          type: string
+          format: date-time
+        end_date:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [upcoming, active, completed]
+        participant_count:
+          type: integer
+        my_progress:
+          type: number
+          description: 當前使用者進度百分比
+        my_rank:
+          type: integer
+          nullable: true
+          description: 當前使用者排名（null 表示未參與）
+
+    ChallengeDetail:
+      allOf:
+        - $ref: '#/components/schemas/Challenge'
+        - type: object
+          properties:
+            description:
+              type: string
+              nullable: true
+            creator:
+              type: object
+              properties:
+                user_id:
+                  type: string
+                display_name:
+                  type: string
+                avatar_url:
+                  type: string
+                  nullable: true
+            participants:
+              type: array
+              items:
+                $ref: '#/components/schemas/ChallengeParticipant'
+
+    ChallengeParticipant:
+      type: object
+      properties:
+        user_id:
+          type: string
+        display_name:
+          type: string
+        avatar_url:
+          type: string
+          nullable: true
+        joined_at:
+          type: string
+          format: date-time
+        current_progress:
+          type: number
+          description: 當前進度數值
+        completion_percentage:
+          type: number
+          description: 完成百分比
+        rank:
+          type: integer
+          nullable: true
+        status:
+          type: string
+          enum: [active, completed, withdrawn]
+
+    LeaderboardEntry:
+      type: object
+      properties:
+        rank:
+          type: integer
+        user_id:
+          type: string
+        display_name:
+          type: string
+        avatar_url:
+          type: string
+          nullable: true
+        current_progress:
+          type: number
+        completion_percentage:
+          type: number
+        badge:
+          type: string
+          nullable: true
+          enum: [gold, silver, bronze, challenger, super_challenger]
+          description: 獲得的徽章（挑戰完成後）
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          nullable: true
+
+  responses:
+    BadRequest:
+      description: 請求參數錯誤
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: 未授權或 Token 無效
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: 資源不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

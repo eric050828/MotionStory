@@ -1,0 +1,400 @@
+openapi: 3.0.3
+info:
+  title: MotionStory Friends API
+  description: 好友系統 API，支援好友搜尋、邀請、管理與封鎖功能
+  version: 1.0.0
+  contact:
+    name: MotionStory API Team
+
+servers:
+  - url: https://api.motionstory.com/api/v1
+    description: Production server
+  - url: http://localhost:8000/api/v1
+    description: Development server
+
+tags:
+  - name: Friends
+    description: 好友系統相關操作
+
+paths:
+  /friends/search:
+    post:
+      tags:
+        - Friends
+      summary: 搜尋好友
+      description: |
+        透過使用者 ID、Email 或 QR Code 搜尋好友
+        排除已封鎖使用者與已是好友的使用者
+      operationId: searchFriends
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - query_type
+                - query
+              properties:
+                query_type:
+                  type: string
+                  enum: [user_id, email, qrcode]
+                  description: 搜尋類型
+                query:
+                  type: string
+                  description: 搜尋關鍵字
+            example:
+              query_type: email
+              query: friend@example.com
+      responses:
+        '200':
+          description: 搜尋成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserSearchResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /friends/invite:
+    post:
+      tags:
+        - Friends
+      summary: 發送好友邀請
+      description: |
+        向指定使用者發送好友邀請
+        - 好友上限: 200 人
+        - 冷卻期: 被拒絕後 7 天內不可再次邀請同一使用者
+      operationId: sendFriendInvite
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - friend_id
+              properties:
+                friend_id:
+                  type: string
+                  description: 目標使用者 ID
+            example:
+              friend_id: 507f1f77bcf86cd799439011
+      responses:
+        '201':
+          description: 邀請發送成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Friendship'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          description: 邀請冷卻期中或已達好友上限
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /friends:
+    get:
+      tags:
+        - Friends
+      summary: 取得好友清單
+      description: 取得目前使用者的好友清單，支援狀態過濾與分頁
+      operationId: getFriends
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [accepted, pending, rejected]
+            default: accepted
+          description: 好友狀態篩選
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        '200':
+          description: 查詢成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  friends:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/FriendProfile'
+                  total_count:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /friends/requests:
+    get:
+      tags:
+        - Friends
+      summary: 取得待處理的好友邀請
+      description: 取得收到的待接受好友邀請清單
+      operationId: getFriendRequests
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 查詢成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  requests:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/FriendRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /friends/{friendship_id}/accept:
+    post:
+      tags:
+        - Friends
+      summary: 接受好友邀請
+      description: 接受指定的好友邀請
+      operationId: acceptFriendRequest
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: friendship_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 接受成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Friendship'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /friends/{friendship_id}/reject:
+    post:
+      tags:
+        - Friends
+      summary: 拒絕好友邀請
+      description: 拒絕指定的好友邀請
+      operationId: rejectFriendRequest
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: friendship_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 拒絕成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /friends/{friendship_id}:
+    delete:
+      tags:
+        - Friends
+      summary: 移除好友
+      description: 移除指定好友關係
+      operationId: removeFriend
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: friendship_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: 移除成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /friends/{user_id}/block:
+    post:
+      tags:
+        - Friends
+      summary: 封鎖使用者
+      description: |
+        封鎖指定使用者
+        封鎖後對方無法搜尋到你，且會自動移除好友關係
+      operationId: blockUser
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  maxLength: 200
+                  description: 封鎖原因（可選）
+      responses:
+        '200':
+          description: 封鎖成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    UserSearchResult:
+      type: object
+      properties:
+        user_id:
+          type: string
+        display_name:
+          type: string
+        avatar_url:
+          type: string
+          nullable: true
+        is_friend:
+          type: boolean
+        is_blocked:
+          type: boolean
+
+    Friendship:
+      type: object
+      properties:
+        friendship_id:
+          type: string
+        user_id:
+          type: string
+        friend_id:
+          type: string
+        status:
+          type: string
+          enum: [pending, accepted, rejected]
+        invited_at:
+          type: string
+          format: date-time
+        accepted_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    FriendProfile:
+      type: object
+      properties:
+        user_id:
+          type: string
+        display_name:
+          type: string
+        avatar_url:
+          type: string
+          nullable: true
+        last_workout_at:
+          type: string
+          format: date-time
+          nullable: true
+        total_workouts:
+          type: integer
+        friendship_since:
+          type: string
+          format: date-time
+
+    FriendRequest:
+      type: object
+      properties:
+        friendship_id:
+          type: string
+        from_user:
+          $ref: '#/components/schemas/UserSearchResult'
+        invited_at:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          nullable: true
+
+  responses:
+    BadRequest:
+      description: 請求參數錯誤
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: 未授權或 Token 無效
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: 資源不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

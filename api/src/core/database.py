@@ -113,7 +113,133 @@ class MongoDB:
             name="idx_user_created"
         )
 
-        print("✅ Database indexes created successfully")
+        # Phase 3: Social Features Indexes
+
+        # T227: Friendships collection indexes
+        await db.friendships.create_index(
+            [("user_id", 1), ("status", 1)],
+            name="idx_user_status"
+        )
+        await db.friendships.create_index(
+            [("friend_id", 1), ("status", 1)],
+            name="idx_friend_status"
+        )
+        await db.friendships.create_index(
+            [("user_id", 1), ("friend_id", 1)],
+            unique=True,
+            name="idx_user_friend_unique"
+        )
+
+        # T228: Activities collection indexes
+        await db.activities.create_index(
+            [("user_id", 1), ("created_at", -1)],
+            name="idx_user_created_at"
+        )
+        await db.activities.create_index(
+            [("created_at", -1)],
+            name="idx_created_at"
+        )
+        await db.activities.create_index(
+            [("activity_type", 1), ("reference_id", 1)],
+            name="idx_type_reference"
+        )
+
+        # T229: Likes collection indexes
+        await db.likes.create_index(
+            [("activity_id", 1), ("user_id", 1)],
+            unique=True,
+            name="idx_activity_user_unique"
+        )
+        await db.likes.create_index(
+            [("user_id", 1), ("liked_at", -1)],
+            name="idx_user_liked_at"
+        )
+
+        # T230: Comments collection indexes
+        await db.comments.create_index(
+            [("activity_id", 1), ("created_at", -1)],
+            name="idx_activity_created"
+        )
+        await db.comments.create_index(
+            [("user_id", 1), ("created_at", -1)],
+            name="idx_user_created"
+        )
+        await db.comments.create_index(
+            [("parent_id", 1)],
+            name="idx_parent_id",
+            partialFilterExpression={"parent_id": {"$ne": None}}
+        )
+
+        # T231: Challenges collection indexes
+        await db.challenges.create_index(
+            [("creator_id", 1), ("status", 1)],
+            name="idx_creator_status"
+        )
+        await db.challenges.create_index(
+            [("status", 1), ("start_date", 1)],
+            name="idx_status_start_date"
+        )
+        await db.challenges.create_index(
+            [("privacy", 1), ("status", 1)],
+            name="idx_privacy_status"
+        )
+
+        # T232: Participants collection indexes
+        await db.participants.create_index(
+            [("challenge_id", 1), ("user_id", 1)],
+            unique=True,
+            name="idx_challenge_user_unique"
+        )
+        await db.participants.create_index(
+            [("user_id", 1), ("status", 1)],
+            name="idx_user_status_participant"
+        )
+        await db.participants.create_index(
+            [("challenge_id", 1), ("rank", 1)],
+            name="idx_challenge_rank"
+        )
+
+        # T233: Notifications collection indexes
+        await db.notifications.create_index(
+            [("user_id", 1), ("created_at", -1)],
+            name="idx_user_created_notif"
+        )
+        await db.notifications.create_index(
+            [("user_id", 1), ("is_read", 1)],
+            name="idx_user_is_read"
+        )
+        await db.notifications.create_index(
+            [("created_at", 1)],
+            name="idx_created_at_ttl",
+            expireAfterSeconds=2592000  # 30 days TTL
+        )
+
+        # T234: Leaderboards collection indexes
+        await db.leaderboards.create_index(
+            [("period", 1), ("metric", 1), ("rank", 1)],
+            name="idx_period_metric_rank"
+        )
+        await db.leaderboards.create_index(
+            [("user_id", 1), ("period", 1), ("metric", 1)],
+            name="idx_user_period_metric"
+        )
+        await db.leaderboards.create_index(
+            [("period_end", 1)],
+            name="idx_period_end"
+        )
+
+        # T235: BlockList collection indexes
+        await db.blocklist.create_index(
+            [("user_id", 1), ("blocked_user_id", 1)],
+            unique=True,
+            name="idx_user_blocked_unique"
+        )
+        await db.blocklist.create_index(
+            [("blocked_user_id", 1)],
+            name="idx_blocked_user_id"
+        )
+
+        print("✅ Database indexes created successfully (Phase 1-3)")
 
 
 # Convenience function to get database

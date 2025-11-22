@@ -1,0 +1,403 @@
+openapi: 3.0.3
+info:
+  title: MotionStory Notifications API
+  description: 通知系統 API，支援推播通知管理與偏好設定
+  version: 1.0.0
+  contact:
+    name: MotionStory API Team
+
+servers:
+  - url: https://api.motionstory.com/api/v1
+    description: Production server
+  - url: http://localhost:8000/api/v1
+    description: Development server
+
+tags:
+  - name: Notifications
+    description: 通知系統相關操作
+
+paths:
+  /notifications:
+    get:
+      tags:
+        - Notifications
+      summary: 取得通知清單
+      description: |
+        取得使用者的通知記錄
+        - 支援類型篩選與分頁
+        - 顯示最近 30 天的通知
+      operationId: getNotifications
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [friend_request, friend_activity, interaction, challenge_update, all]
+            default: all
+          description: 通知類型篩選
+        - name: read_status
+          in: query
+          schema:
+            type: string
+            enum: [read, unread, all]
+            default: all
+          description: 已讀狀態篩選
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        '200':
+          description: 查詢成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notifications:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Notification'
+                  unread_count:
+                    type: integer
+                    description: 未讀通知總數
+                  total_count:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /notifications/{notification_id}/read:
+    post:
+      tags:
+        - Notifications
+      summary: 標記通知為已讀
+      description: 標記指定通知為已讀狀態
+      operationId: markNotificationAsRead
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: notification_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 標記成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /notifications/read-all:
+    post:
+      tags:
+        - Notifications
+      summary: 全部標記為已讀
+      description: 將所有未讀通知標記為已讀
+      operationId: markAllNotificationsAsRead
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 標記成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  marked_count:
+                    type: integer
+                    description: 被標記的通知數量
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /notifications/{notification_id}:
+    delete:
+      tags:
+        - Notifications
+      summary: 刪除通知
+      description: 刪除指定通知
+      operationId: deleteNotification
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: notification_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: 刪除成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /notifications/preferences:
+    get:
+      tags:
+        - Notifications
+      summary: 取得通知偏好設定
+      description: 取得使用者的通知偏好設定
+      operationId: getNotificationPreferences
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 查詢成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPreferences'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    put:
+      tags:
+        - Notifications
+      summary: 更新通知偏好設定
+      description: |
+        更新使用者的通知偏好
+        - 可分別控制各類通知開關
+        - 支援免打擾時段設定
+        - 支援通知頻率控制
+      operationId: updateNotificationPreferences
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                friend_request_enabled:
+                  type: boolean
+                  description: 好友邀請通知
+                friend_activity_enabled:
+                  type: boolean
+                  description: 好友動態通知
+                interaction_enabled:
+                  type: boolean
+                  description: 互動通知（按讚/留言）
+                challenge_update_enabled:
+                  type: boolean
+                  description: 挑戰賽更新通知
+                notification_frequency:
+                  type: string
+                  enum: [realtime, daily_digest, off]
+                  description: 通知頻率
+                daily_digest_time:
+                  type: string
+                  pattern: '^([0-1][0-9]|2[0-3]):[0-5][0-9]$'
+                  description: 每日摘要時間（格式 HH:MM，如 08:00）
+                do_not_disturb_enabled:
+                  type: boolean
+                  description: 啟用免打擾時段
+                do_not_disturb_start:
+                  type: string
+                  pattern: '^([0-1][0-9]|2[0-3]):[0-5][0-9]$'
+                  description: 免打擾開始時間（格式 HH:MM）
+                do_not_disturb_end:
+                  type: string
+                  pattern: '^([0-1][0-9]|2[0-3]):[0-5][0-9]$'
+                  description: 免打擾結束時間（格式 HH:MM）
+            example:
+              friend_request_enabled: true
+              friend_activity_enabled: true
+              interaction_enabled: true
+              challenge_update_enabled: true
+              notification_frequency: realtime
+              do_not_disturb_enabled: true
+              do_not_disturb_start: "22:00"
+              do_not_disturb_end: "07:00"
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPreferences'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /notifications/unread-count:
+    get:
+      tags:
+        - Notifications
+      summary: 取得未讀通知數量
+      description: 快速查詢未讀通知總數（用於角標顯示）
+      operationId: getUnreadNotificationCount
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 查詢成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  unread_count:
+                    type: integer
+                  count_by_type:
+                    type: object
+                    properties:
+                      friend_request:
+                        type: integer
+                      friend_activity:
+                        type: integer
+                      interaction:
+                        type: integer
+                      challenge_update:
+                        type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Notification:
+      type: object
+      properties:
+        notification_id:
+          type: string
+        user_id:
+          type: string
+          description: 接收者 ID
+        notification_type:
+          type: string
+          enum: [friend_request, friend_activity, interaction, challenge_update]
+        title:
+          type: string
+          description: 通知標題
+        message:
+          type: string
+          description: 通知內容
+        reference_type:
+          type: string
+          nullable: true
+          enum: [friendship, activity, like, comment, challenge]
+          description: 關聯物件類型
+        reference_id:
+          type: string
+          nullable: true
+          description: 關聯物件 ID
+        sender:
+          type: object
+          nullable: true
+          properties:
+            user_id:
+              type: string
+            display_name:
+              type: string
+            avatar_url:
+              type: string
+              nullable: true
+        is_read:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        read_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    NotificationPreferences:
+      type: object
+      properties:
+        user_id:
+          type: string
+        friend_request_enabled:
+          type: boolean
+          default: true
+        friend_activity_enabled:
+          type: boolean
+          default: true
+        interaction_enabled:
+          type: boolean
+          default: true
+        challenge_update_enabled:
+          type: boolean
+          default: true
+        notification_frequency:
+          type: string
+          enum: [realtime, daily_digest, off]
+          default: realtime
+          description: 通知頻率（即時/每日摘要/關閉）
+        daily_digest_time:
+          type: string
+          default: "08:00"
+          description: 每日摘要時間（格式 HH:MM）
+        do_not_disturb_enabled:
+          type: boolean
+          default: false
+        do_not_disturb_start:
+          type: string
+          nullable: true
+          description: 免打擾開始時間（格式 HH:MM）
+        do_not_disturb_end:
+          type: string
+          nullable: true
+          description: 免打擾結束時間（格式 HH:MM）
+        updated_at:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          nullable: true
+
+  responses:
+    BadRequest:
+      description: 請求參數錯誤
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: 未授權或 Token 無效
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: 資源不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
