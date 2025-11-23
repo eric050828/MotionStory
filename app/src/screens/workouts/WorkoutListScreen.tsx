@@ -26,42 +26,23 @@ import {
   PersonStanding,
   Dumbbell,
   Sparkles,
-  ClipboardList, // Added for empty state icon
-  Pencil, // Added for add button icon
+  ClipboardList,
+  Pencil,
 } from "@tamagui/lucide-icons";
 import useWorkoutStore from "../../store/workoutStore";
 import { Workout, WorkoutType } from "../../types/workout";
 import { Loading } from "../../components/ui/Loading";
 import { WorkoutStackParamList } from "../../types/navigation";
-import { LinearGradient } from "tamagui/linear-gradient";
+import {
+  WORKOUT_TYPE_ICONS,
+  WORKOUT_TYPE_LABELS,
+  WORKOUT_TYPES,
+} from "../../constants/workout";
 
 type WorkoutListScreenNavigationProp = NavigationProp<
   WorkoutStackParamList,
   "WorkoutList"
 >;
-
-const WORKOUT_TYPE_ICONS: Record<
-  WorkoutType,
-  React.FC<{ size?: number; color?: string }>
-> = {
-  running: Footprints,
-  cycling: Bike,
-  swimming: Waves,
-  hiking: Mountain,
-  yoga: PersonStanding,
-  strength_training: Dumbbell,
-  other: Sparkles,
-};
-
-const WORKOUT_TYPE_LABELS: Record<WorkoutType, string> = {
-  running: "跑步",
-  cycling: "騎車",
-  swimming: "游泳",
-  hiking: "登山",
-  yoga: "瑜伽",
-  strength_training: "重訓",
-  other: "其他",
-};
 
 const WorkoutListScreen: React.FC = () => {
   const navigation = useNavigation<WorkoutListScreenNavigationProp>();
@@ -151,7 +132,7 @@ const WorkoutListScreen: React.FC = () => {
             justifyContent="center"
             alignItems="center"
           >
-            <Icon size={24} color={theme.blue10?.val} />
+            <Icon size={24} color={theme.activeBlue10.val} />
           </YStack>
 
           <YStack flex={1}>
@@ -198,11 +179,7 @@ const WorkoutListScreen: React.FC = () => {
   const renderTypeFilter = () => {
     const types: Array<WorkoutType | null> = [
       null,
-      "running",
-      "cycling",
-      "swimming",
-      "hiking",
-      "yoga",
+      ...WORKOUT_TYPES.map((t) => t.value),
     ];
 
     return (
@@ -234,7 +211,7 @@ const WorkoutListScreen: React.FC = () => {
                   icon={
                     <Icon
                       size={20}
-                      color={isActive ? theme.blue10?.val : theme.gray10?.val}
+                      color={isActive ? theme.activeBlue10.val : theme.color.val}
                     />
                   }
                 />
@@ -293,9 +270,9 @@ const WorkoutListScreen: React.FC = () => {
           space="$4" // Increased space for better visual separation
           padding="$4" // Added padding for overall layout
         >
-          <ClipboardList size={80} color={theme.gray8?.val} marginBottom="$3" />{" "}
+          <ClipboardList size={80} color={theme.color.val} marginBottom="$3" />{" "}
           {/* Icon added */}
-          <Text fontSize="$6" color="$gray10" marginBottom="$2">
+          <Text fontSize="$6" color="$color" marginBottom="$2">
             尚無運動記錄
           </Text>
           <Paragraph theme="alt2" textAlign="center" marginBottom="$5">
@@ -316,7 +293,13 @@ const WorkoutListScreen: React.FC = () => {
         </YStack>
       )}
 
-      <YStack position="absolute" right={24} bottom={24} alignItems="center" justifyContent="center">
+      <YStack
+        position="absolute"
+        right={24}
+        bottom={24}
+        alignItems="center"
+        justifyContent="center"
+      >
         {/* Sonar Effect */}
         {[...Array(2)].map((_, i) => (
           <YStack
@@ -327,7 +310,7 @@ const WorkoutListScreen: React.FC = () => {
             borderRadius={28}
             backgroundColor="$blue8"
             Animation="sonar"
-            animateOnly={['transform', 'opacity']}
+            animateOnly={["transform", "opacity"]}
             opacity={0.4}
             scale={1}
             {...{

@@ -33,17 +33,7 @@ import {
 import { api } from "../services/api";
 import { WorkoutType } from "../types/workout";
 
-const WORKOUT_TYPES: Array<{
-  label: string;
-  value: WorkoutType;
-  icon: React.FC<any>;
-}> = [
-  { label: "跑步", value: "running", icon: Footprints },
-  { label: "騎車", value: "cycling", icon: Bike },
-  { label: "游泳", value: "swimming", icon: Waves },
-  { label: "重訓", value: "strength_training", icon: Dumbbell },
-  { label: "其他", value: "other", icon: Sparkles },
-];
+import { WORKOUT_TYPES } from "../constants/workout";
 
 // New component to simplify type inference for ToggleGroup - REMOVED
 
@@ -62,57 +52,43 @@ export const WorkoutFormScreen: React.FC = () => {
 
   const [notes, setNotes] = useState("");
 
-    const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-    const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
-    const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
-  
+  const theme = useTheme();
 
-    const theme = useTheme();
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(Platform.OS === "ios");
 
-  
+    if (selectedDate) {
+      const newStartTime = new Date(startTime);
 
-    const handleDateChange = (event: any, selectedDate?: Date) => {
+      newStartTime.setFullYear(selectedDate.getFullYear());
 
-      setShowDatePicker(Platform.OS === 'ios');
+      newStartTime.setMonth(selectedDate.getMonth());
 
-      if (selectedDate) {
+      newStartTime.setDate(selectedDate.getDate());
 
-        const newStartTime = new Date(startTime);
+      setStartTime(newStartTime);
+    }
+  };
 
-        newStartTime.setFullYear(selectedDate.getFullYear());
+  const handleTimeChange = (event: any, selectedTime?: Date) => {
+    setShowTimePicker(Platform.OS === "ios");
 
-        newStartTime.setMonth(selectedDate.getMonth());
+    if (selectedTime) {
+      const newStartTime = new Date(startTime);
 
-        newStartTime.setDate(selectedDate.getDate());
+      newStartTime.setHours(selectedTime.getHours());
 
-        setStartTime(newStartTime);
+      newStartTime.setMinutes(selectedTime.getMinutes());
 
-      }
-
-    };
-
-  
-
-    const handleTimeChange = (event: any, selectedTime?: Date) => {
-
-      setShowTimePicker(Platform.OS === 'ios');
-
-      if (selectedTime) {
-
-        const newStartTime = new Date(startTime);
-
-        newStartTime.setHours(selectedTime.getHours());
-
-        newStartTime.setMinutes(selectedTime.getMinutes());
-
-        setStartTime(newStartTime);
-
-      }
-
-    };
+      setStartTime(newStartTime);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!duration) {
@@ -223,8 +199,8 @@ export const WorkoutFormScreen: React.FC = () => {
                 <Button
                   key={type.value}
                   margin="$1"
-                  variant={isActive ? undefined : 'outlined'}
-                  theme={isActive ? 'brand' : 'gray'}
+                  variant={isActive ? undefined : "outlined"}
+                  theme={isActive ? "brand" : "gray"}
                   onPress={() => setWorkoutType(type.value)}
                   size="$3"
                   paddingHorizontal="$3"
@@ -235,7 +211,7 @@ export const WorkoutFormScreen: React.FC = () => {
                     />
                   }
                 >
-                  <Text fontSize="$2" color={isActive ? '$brand' : '$color'}>
+                  <Text fontSize="$2" color={isActive ? "$brand" : "$color"}>
                     {type.label}
                   </Text>
                 </Button>
@@ -244,99 +220,59 @@ export const WorkoutFormScreen: React.FC = () => {
           </XStack>
         </YStack>
 
-                {/* Workout Time Section */}
+        {/* Workout Time Section */}
 
-                <YStack>
+        <YStack>
+          <H4 marginBottom="$3">運動時間</H4>
 
-                  <H4 marginBottom="$3">運動時間</H4>
+          <XStack space="$2">
+            <Button
+              icon={<Calendar size={20} />}
+              onPress={() => setShowDatePicker(true)}
+              size="$4"
+              justifyContent="flex-start"
+              theme="gray"
+              variant="outlined"
+              flex={1}
+            >
+              {startTime.toLocaleDateString("zh-TW")}
+            </Button>
 
-                  <XStack space="$2">
+            <Button
+              icon={<Clock size={20} />}
+              onPress={() => setShowTimePicker(true)}
+              size="$4"
+              justifyContent="flex-start"
+              theme="gray"
+              variant="outlined"
+              flex={1}
+            >
+              {startTime.toLocaleTimeString("zh-TW", {
+                hour: "2-digit",
 
-                    <Button
+                minute: "2-digit",
+              })}
+            </Button>
+          </XStack>
 
-                      icon={<Calendar size={20} />}
+          {showDatePicker && (
+            <DateTimePicker
+              value={startTime}
+              mode="date"
+              display={Platform.OS === "ios" ? "spinner" : "default"}
+              onChange={handleDateChange}
+            />
+          )}
 
-                      onPress={() => setShowDatePicker(true)}
-
-                      size="$4"
-
-                      justifyContent="flex-start"
-
-                      theme="gray"
-
-                      variant="outlined"
-
-                      flex={1}
-
-                    >
-
-                      {startTime.toLocaleDateString('zh-TW')}
-
-                    </Button>
-
-                    <Button
-
-                      icon={<Clock size={20} />}
-
-                      onPress={() => setShowTimePicker(true)}
-
-                      size="$4"
-
-                      justifyContent="flex-start"
-
-                      theme="gray"
-
-                      variant="outlined"
-
-                      flex={1}
-
-                    >
-
-                      {startTime.toLocaleTimeString('zh-TW', {
-
-                        hour: '2-digit',
-
-                        minute: '2-digit',
-
-                      })}
-
-                    </Button>
-
-                  </XStack>
-
-                  {showDatePicker && (
-
-                    <DateTimePicker
-
-                      value={startTime}
-
-                      mode="date"
-
-                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-
-                      onChange={handleDateChange}
-
-                    />
-
-                  )}
-
-                  {showTimePicker && (
-
-                    <DateTimePicker
-
-                      value={startTime}
-
-                      mode="time"
-
-                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-
-                      onChange={handleTimeChange}
-
-                    />
-
-                  )}
-
-                </YStack>
+          {showTimePicker && (
+            <DateTimePicker
+              value={startTime}
+              mode="time"
+              display={Platform.OS === "ios" ? "spinner" : "default"}
+              onChange={handleTimeChange}
+            />
+          )}
+        </YStack>
 
         {/* Workout Data Section */}
 
