@@ -1,36 +1,31 @@
-/**
- * T158: SettingsScreen
- * 使用者設定畫面
- */
-
-import React, { useState } from 'react';
+import React, { useState } from "react";
+import { Alert } from "react-native";
 import {
-  View,
-  Text,
-  StyleSheet,
+  Avatar,
+  Button,
+  Card,
+  H4,
+  Paragraph,
   ScrollView,
   Switch,
-  TouchableOpacity,
-  Alert,
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { useAuthStore } from '../../store/useAuthStore';
-import { Button } from '../../components/Button';
+  XStack,
+  YStack,
+  Text,
+} from "tamagui";
+import { useAuthStore } from "../../store/useAuthStore";
+import { Save, LogOut } from "@tamagui/lucide-icons";
 
 const SettingsScreen: React.FC = () => {
-  const navigation = useNavigation();
   const { user, logout, updatePrivacySettings } = useAuthStore();
 
   const [settings, setSettings] = useState({
     shareLocation: user?.privacy_settings.share_location || false,
     shareStats: user?.privacy_settings.share_detailed_stats || false,
     notifications: true,
-    language: 'zh-TW',
-    units: 'metric',
   });
 
-  const handleToggle = (key: string) => {
-    setSettings((prev) => ({ ...prev, [key]: !prev[key as keyof typeof prev] }));
+  const handleToggle = (key: keyof typeof settings) => {
+    setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
   const handleSave = async () => {
@@ -39,18 +34,18 @@ const SettingsScreen: React.FC = () => {
         share_location: settings.shareLocation,
         share_detailed_stats: settings.shareStats,
       });
-      Alert.alert('儲存成功', '設定已更新');
+      Alert.alert("儲存成功", "設定已更新");
     } catch (err) {
-      Alert.alert('儲存失敗', '請稍後再試');
+      Alert.alert("儲存失敗", "請稍後再試");
     }
   };
 
   const handleLogout = () => {
-    Alert.alert('登出', '確定要登出嗎？', [
-      { text: '取消', style: 'cancel' },
+    Alert.alert("登出", "確定要登出嗎？", [
+      { text: "取消", style: "cancel" },
       {
-        text: '登出',
-        style: 'destructive',
+        text: "登出",
+        style: "destructive",
         onPress: async () => {
           await logout();
         },
@@ -58,193 +53,131 @@ const SettingsScreen: React.FC = () => {
     ]);
   };
 
+  const SettingItem = ({
+    label,
+    description,
+    children,
+  }: {
+    label: string;
+    description?: string;
+    children: React.ReactNode;
+  }) => (
+    <XStack
+      justifyContent="space-between"
+      alignItems="center"
+      padding="$3"
+      backgroundColor="$background"
+      borderRadius="$4"
+    >
+      <YStack>
+        <Paragraph size="$5" fontWeight="500">
+          {label}
+        </Paragraph>
+        {description && <Paragraph theme="alt2">{description}</Paragraph>}
+      </YStack>
+      {children}
+    </XStack>
+  );
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Profile Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>個人資料</Text>
-        <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {user?.display_name.charAt(0).toUpperCase()}
-            </Text>
-          </View>
-          <View style={styles.profileInfo}>
-            <Text style={styles.userName}>{user?.display_name}</Text>
-            <Text style={styles.userEmail}>{user?.email}</Text>
-          </View>
-        </View>
-      </View>
+    <ScrollView>
+      <YStack space="$5" padding="$4">
+        {/* Profile Section */}
+        {user && (
+          <YStack space="$3">
+            <H4>個人資料</H4>
+            <Card elevate size="$4">
+              <XStack space="$4" alignItems="center">
+                <Avatar circular size="$6" overflow="hidden">
+                  <Avatar.Image src="https://ui-avatars.com/api/?name=Test%20User" />
+                  <Avatar.Fallback bc="$blue10">U</Avatar.Fallback>
+                </Avatar>
 
-      {/* Privacy Settings */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>隱私設定</Text>
+                <YStack>
+                  <Text fontSize="$6" fontWeight="600">
+                    {user.display_name}
+                  </Text>
+                  <Paragraph theme="alt1">{user.email}</Paragraph>
+                </YStack>
+              </XStack>
+            </Card>
+          </YStack>
+        )}
 
-        <View style={styles.settingItem}>
-          <View style={styles.settingInfo}>
-            <Text style={styles.settingLabel}>分享位置資訊</Text>
-            <Text style={styles.settingDescription}>允許在運動記錄中顯示位置</Text>
-          </View>
-          <Switch
-            value={settings.shareLocation}
-            onValueChange={() => handleToggle('shareLocation')}
-          />
-        </View>
+        {/* Privacy Settings */}
+        <YStack space="$3">
+          <H4>隱私設定</H4>
+          <YStack space="$2">
+            <SettingItem
+              label="分享位置資訊"
+              description="允許在運動記錄中顯示位置"
+            >
+              <Switch
+                size="$3"
+                checked={settings.shareLocation}
+                onCheckedChange={() => handleToggle("shareLocation")}
+              >
+                <Switch.Thumb animation="bouncy" />
+              </Switch>
+            </SettingItem>
+            <SettingItem
+              label="分享詳細統計"
+              description="在公開資料中顯示詳細數據"
+            >
+              <Switch
+                size="$3"
+                checked={settings.shareStats}
+                onCheckedChange={() => handleToggle("shareStats")}
+              >
+                <Switch.Thumb animation="bouncy" />
+              </Switch>
+            </SettingItem>
+          </YStack>
+        </YStack>
 
-        <View style={styles.settingItem}>
-          <View style={styles.settingInfo}>
-            <Text style={styles.settingLabel}>分享詳細統計</Text>
-            <Text style={styles.settingDescription}>在公開資料中顯示詳細數據</Text>
-          </View>
-          <Switch
-            value={settings.shareStats}
-            onValueChange={() => handleToggle('shareStats')}
-          />
-        </View>
-      </View>
+        {/* App Settings */}
+        <YStack space="$3">
+          <H4>應用程式設定</H4>
+          <YStack space="$2">
+            <SettingItem label="語言">
+              <Text fontSize="$4" theme="alt1">
+                繁體中文
+              </Text>
+            </SettingItem>
+            <SettingItem label="單位">
+              <Text fontSize="$4" theme="alt1">
+                公制 (公里、公斤)
+              </Text>
+            </SettingItem>
+            <SettingItem label="推播通知">
+              <Switch
+                size="$3"
+                checked={settings.notifications}
+                onCheckedChange={() => handleToggle("notifications")}
+              >
+                <Switch.Thumb animation="bouncy" />
+              </Switch>
+            </SettingItem>
+          </YStack>
+        </YStack>
 
-      {/* App Settings */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>應用程式設定</Text>
-
-        <TouchableOpacity style={styles.settingItem}>
-          <View style={styles.settingInfo}>
-            <Text style={styles.settingLabel}>語言</Text>
-            <Text style={styles.settingValue}>繁體中文</Text>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.settingItem}>
-          <View style={styles.settingInfo}>
-            <Text style={styles.settingLabel}>單位</Text>
-            <Text style={styles.settingValue}>公制 (公里、公斤)</Text>
-          </View>
-        </TouchableOpacity>
-
-        <View style={styles.settingItem}>
-          <View style={styles.settingInfo}>
-            <Text style={styles.settingLabel}>推播通知</Text>
-          </View>
-          <Switch
-            value={settings.notifications}
-            onValueChange={() => handleToggle('notifications')}
-          />
-        </View>
-      </View>
-
-      {/* Account Actions */}
-      <View style={styles.section}>
-        <Button
-          title="儲存設定"
-          onPress={handleSave}
-          style={styles.saveButton}
-        />
-
-        <Button
-          title="登出"
-          onPress={handleLogout}
-          variant="outline"
-          style={styles.logoutButton}
-        />
-      </View>
+        {/* Account Actions */}
+        <YStack space="$3" paddingTop="$4">
+          <Button icon={<Save />} theme="green" onPress={handleSave}>
+            儲存設定
+          </Button>
+          <Button
+            icon={<LogOut />}
+            theme="red"
+            onPress={handleLogout}
+            variant="outlined"
+          >
+            登出
+          </Button>
+        </YStack>
+      </YStack>
     </ScrollView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  content: {
-    padding: 16,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 12,
-  },
-  profileCard: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#2196F3',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  avatarText: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  profileInfo: {
-    flex: 1,
-  },
-  userName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
-  },
-  userEmail: {
-    fontSize: 14,
-    color: '#666',
-  },
-  settingItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  settingInfo: {
-    flex: 1,
-    marginRight: 16,
-  },
-  settingLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
-    marginBottom: 4,
-  },
-  settingDescription: {
-    fontSize: 13,
-    color: '#666',
-  },
-  settingValue: {
-    fontSize: 14,
-    color: '#2196F3',
-  },
-  saveButton: {
-    marginBottom: 12,
-  },
-  logoutButton: {
-    borderColor: '#F44336',
-  },
-});
 
 export default SettingsScreen;
