@@ -30,19 +30,18 @@ export type RootStackParamList = {
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-const { width } = Dimensions.get("window");
-
-const widgetGradients: Record<string, string[]> = {
-  CHART: ["#00C9A7", "#00D9C0"],
-  TABLE: ["#FFB800", "#FFD60A"],
-  KPI: ["#FF6B6B", "#FF8E8E"],
-  GAUGE: ["#4DABF7", "#74C0FC"],
-  MAP: ["#9775FA", "#B197FC"],
-  TEXT: ["#868E96", "#ADB5BD"],
-  DEFAULT: ["#495057", "#6C757D"],
+const getWidgetGradients = (): Record<string, string[]> => {
+  return {
+    CHART: ["$activeBlue8", "$activeBlue9"],
+    TABLE: ["$activeBlue7", "$activeBlue8"],
+    KPI: ["$energyOrange6", "$activeBlue9"],
+    GAUGE: ["$activeBlue6", "$activeBlue7"],
+    MAP: ["$activeBlue5", "$activeBlue6"],
+    TEXT: ["$light4", "$light5"],
+    DEFAULT: ["$light3", "$light4"],
+  };
 };
 
-// 將陣列拆成每 row n 個
 function chunkArray<T>(arr: T[], size: number): T[][] {
   const result: T[][] = [];
   for (let i = 0; i < arr.length; i += size) {
@@ -91,26 +90,32 @@ const DashboardStudioScreen: React.FC = () => {
   if (loading || !currentDashboard) {
     return (
       <YStack flex={1} bg="$background" jc="center" ai="center">
-        <Spinner size="large" color="$blue10" />
-        <Paragraph mt="$4" color="$color10">
+        <Spinner size="large" color="$brand" />
+        <Paragraph mt="$4" color="$color">
           正在載入你的專屬儀表板...
         </Paragraph>
       </YStack>
     );
   }
 
+  const widgetGradients = getWidgetGradients();
   const hasWidgets = currentDashboard.widgets.length > 0;
 
   return (
     <YStack flex={1} bg="$background">
-      {/* 毛玻璃 Header */}
+      {/* 毛玻璃 Header 背景 */}
       <LinearGradient
         position="absolute"
         top={0}
         left={0}
         right={0}
         height={180}
-        colors={["$blue10", "$blue9"]}
+        // ✅ 修正：這裡加入了判斷式，編輯模式時會變成綠色漸層
+        colors={
+          editMode
+            ? ["$energyGreen6", "$energyGreen7"]
+            : ["$activeBlue8", "$activeBlue9"]
+        }
         opacity={0.12}
         zIndex={-1}
       />
@@ -129,14 +134,14 @@ const DashboardStudioScreen: React.FC = () => {
         shadowOffset={{ width: 0, height: 4 }}
       >
         <YStack>
-          <H2 color="$color12" fontWeight="800">
+          <H2 color="$color" fontWeight="800">
             {currentDashboard.name}
           </H2>
           <XStack ai="center" gap="$2" mt="$1">
-            <Text color={editMode ? "$green10" : "$blue10"} fontSize="$4">
+            <Text color={editMode ? "$success" : "$brand"} fontSize="$4">
               {editMode ? "編輯模式中" : "預覽模式"}
             </Text>
-            {editMode && <Sparkles size={16} color="$green10" />}
+            {editMode && <Sparkles size={16} color="$success" />}
           </XStack>
         </YStack>
 
@@ -147,9 +152,13 @@ const DashboardStudioScreen: React.FC = () => {
           <Button
             onPress={handleToggleEditMode}
             size="$4"
-            theme={editMode ? "green" : "blue"}
+            bg={editMode ? "$success" : "$brand"}
+            color="white"
             fontWeight="600"
             iconAfter={editMode ? undefined : <Settings size={18} />}
+            hoverStyle={{
+              bg: editMode ? "$energyGreen7" : "$activeBlue7",
+            }}
           >
             {editMode ? "完成儲存" : "編輯儀表板"}
           </Button>
@@ -184,7 +193,7 @@ const DashboardStudioScreen: React.FC = () => {
                         height={widget.size.height * 70 + 40}
                         onPress={() => editMode && handleEditWidget(widget)}
                         borderWidth={editMode ? 3 : 1}
-                        borderColor={editMode ? "$green9" : "$borderColor"}
+                        borderColor={editMode ? "$success" : "$borderColor"}
                         borderStyle={editMode ? "dashed" : "solid"}
                         elevate
                         overflow="hidden"
@@ -192,7 +201,7 @@ const DashboardStudioScreen: React.FC = () => {
                           editMode ? { scale: 1.03, y: -4 } : { scale: 1.02 }
                         }
                         pressStyle={{ scale: 0.98 }}
-                        bg="$color2"
+                        bg="$backgroundHover"
                       >
                         <LinearGradient
                           position="absolute"
@@ -223,6 +232,7 @@ const DashboardStudioScreen: React.FC = () => {
                                   icon={Settings}
                                   bg="white"
                                   opacity={0.9}
+                                  color="$color"
                                 />
                               </Motion.View>
                             )}
@@ -287,15 +297,15 @@ const DashboardStudioScreen: React.FC = () => {
                     <Card
                       flex={1}
                       height={180}
-                      bg="$color3"
+                      bg="$backgroundHover"
                       borderWidth={3}
-                      borderColor="$green9"
+                      borderColor="$success"
                       borderStyle="dashed"
                       jc="center"
                       ai="center"
                       gap="$3"
                       onPress={handleAddWidget}
-                      hoverStyle={{ bg: "$green3" }}
+                      hoverStyle={{ bg: "$energyGreen1" }}
                     >
                       <Motion.View
                         animate={{ rotate: [0, 360] }}
@@ -305,16 +315,16 @@ const DashboardStudioScreen: React.FC = () => {
                           ease: "linear",
                         }}
                       >
-                        <Plus size={36} color="$green10" />
+                        <Plus size={36} color="$success" />
                       </Motion.View>
                       <Paragraph
                         fontSize="$6"
                         fontWeight="700"
-                        color="$green11"
+                        color="$success"
                       >
                         新增元件
                       </Paragraph>
-                      <Paragraph fontSize="$3" color="$green10">
+                      <Paragraph fontSize="$3" color="$success">
                         點擊選擇你要的 Widget
                       </Paragraph>
                     </Card>
@@ -329,12 +339,12 @@ const DashboardStudioScreen: React.FC = () => {
               animate={{ y: [0, -10, 0] }}
               transition={{ repeat: Infinity, duration: 3 }}
             >
-              <Sparkles size={64} color="$blue9" opacity={0.6} />
+              <Sparkles size={64} color="$brand" opacity={0.6} />
             </Motion.View>
-            <Paragraph fontSize="$8" fontWeight="700" color="$color11" mt="$6">
+            <Paragraph fontSize="$8" fontWeight="700" color="$color" mt="$6">
               還沒有任何 Widget
             </Paragraph>
-            <Paragraph color="$color9" textAlign="center" mt="$3">
+            <Paragraph color="$color" opacity={0.7} textAlign="center" mt="$3">
               {editMode
                 ? "開始打造屬於你的專屬儀表板吧！"
                 : "點擊右上角「編輯」按鈕開始新增"}
@@ -342,7 +352,7 @@ const DashboardStudioScreen: React.FC = () => {
             {editMode && (
               <Button
                 size="$5"
-                theme="green"
+                bg="$success"
                 mt="$8"
                 onPress={handleAddWidget}
                 icon={<Plus />}
@@ -369,6 +379,7 @@ const DashboardStudioScreen: React.FC = () => {
               right: 0,
               padding: 20,
               paddingBottom: 40,
+              // ✅ 使用主題背景色，避免變成透明或錯誤顏色
               backgroundColor: theme.background.val,
               borderTopWidth: 1,
               borderColor: theme.borderColor.val,
@@ -378,7 +389,7 @@ const DashboardStudioScreen: React.FC = () => {
               <Button
                 flex={1}
                 icon={<Plus />}
-                theme="green"
+                bg="$success"
                 size="$4"
                 onPress={handleAddWidget}
               >
@@ -387,7 +398,7 @@ const DashboardStudioScreen: React.FC = () => {
               <Button
                 flex={1}
                 icon={<LayoutGrid />}
-                theme="blue"
+                bg="$brand"
                 size="$4"
                 onPress={() => navigation.navigate("DragDropEditor" as never)}
               >

@@ -13,10 +13,12 @@ import {
   Text,
 } from "tamagui";
 import { useAuthStore } from "../../store/useAuthStore";
+import { useThemeStore } from "../../store/useThemeStore"; // Import useThemeStore
 import { Save, LogOut } from "@tamagui/lucide-icons";
 
 const SettingsScreen: React.FC = () => {
   const { user, logout, updatePrivacySettings } = useAuthStore();
+  const { theme, setTheme } = useThemeStore(); // Use theme store
 
   const [settings, setSettings] = useState({
     shareLocation: user?.privacy_settings.share_location || false,
@@ -139,6 +141,40 @@ const SettingsScreen: React.FC = () => {
         <YStack space="$3">
           <H4>應用程式設定</H4>
           <YStack space="$2">
+            <SettingItem label="主題">
+              <XStack space="$2">
+                <Button
+                  size="$3"
+                  onPress={() => setTheme('light')}
+                  theme={theme === 'light' ? 'alt1' : undefined}
+                  variant={theme === 'light' ? 'outlined' : undefined}
+                  backgroundColor={theme === 'light' ? '$color4' : '$background'}
+                  color={theme === 'light' ? '$color12' : '$color10'}
+                >
+                  淺色
+                </Button>
+                <Button
+                  size="$3"
+                  onPress={() => setTheme('dark')}
+                  theme={theme === 'dark' ? 'alt1' : undefined}
+                  variant={theme === 'dark' ? 'outlined' : undefined}
+                  backgroundColor={theme === 'dark' ? '$color4' : '$background'}
+                  color={theme === 'dark' ? '$color12' : '$color10'}
+                >
+                  深色
+                </Button>
+                <Button
+                  size="$3"
+                  onPress={() => setTheme('system')}
+                  theme={theme === 'system' ? 'alt1' : undefined}
+                  variant={theme === 'system' ? 'outlined' : undefined}
+                  backgroundColor={theme === 'system' ? '$color4' : '$background'}
+                  color={theme === 'system' ? '$color12' : '$color10'}
+                >
+                  系統
+                </Button>
+              </XStack>
+            </SettingItem>
             <SettingItem label="語言">
               <Text fontSize="$4" theme="alt1">
                 繁體中文
