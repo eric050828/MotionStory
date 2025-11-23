@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Alert, Dimensions } from "react-native";
+import { Alert } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
@@ -15,11 +15,24 @@ import {
   Text,
   useTheme,
 } from "tamagui";
-import { Plus, Settings, LayoutGrid, Sparkles } from "@tamagui/lucide-icons";
+import {
+  Plus,
+  Settings,
+  LayoutGrid,
+  Sparkles,
+  // 新增：用於裝飾卡片的 Widget 類型圖示
+  BarChart2,
+  Table,
+  Activity,
+  Gauge,
+  Map as MapIcon, // 避免與 JS Map 物件衝突
+  Type,
+} from "@tamagui/lucide-icons";
 import useDashboardStore from "../../store/dashboardStore";
 import { Widget } from "../../types/dashboard";
 import { LinearGradient } from "tamagui/linear-gradient";
 import { Motion } from "@legendapp/motion";
+import { useThemeStore } from "../../store/useThemeStore";
 
 export type RootStackParamList = {
   Home: undefined;
@@ -30,18 +43,64 @@ export type RootStackParamList = {
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-const getWidgetGradients = (): Record<string, string[]> => {
+// --- Helper: 取得對應類型的顏色 (保持原有邏輯) ---
+const getWidgetColors = (
+  theme: "light" | "dark"
+): Record<string, { bg: string; color: string }> => {
+  const isDark = theme === "dark";
   return {
-    CHART: ["$activeBlue8", "$activeBlue9"],
-    TABLE: ["$activeBlue7", "$activeBlue8"],
-    KPI: ["$energyOrange6", "$activeBlue9"],
-    GAUGE: ["$activeBlue6", "$activeBlue7"],
-    MAP: ["$activeBlue5", "$activeBlue6"],
-    TEXT: ["$light4", "$light5"],
-    DEFAULT: ["$light3", "$light4"],
+    CHART: {
+      bg: isDark ? "$blue7" : "$blue3",
+      color: isDark ? "$blue12" : "$blue11",
+    },
+    TABLE: {
+      bg: isDark ? "$green7" : "$green3",
+      color: isDark ? "$green12" : "$green11",
+    },
+    KPI: {
+      bg: isDark ? "$orange7" : "$orange3",
+      color: isDark ? "$orange12" : "$orange11",
+    },
+    GAUGE: {
+      bg: isDark ? "$yellow7" : "$yellow3",
+      color: isDark ? "$yellow12" : "$yellow11",
+    },
+    MAP: {
+      bg: isDark ? "$red7" : "$red3",
+      color: isDark ? "$red12" : "$red11",
+    },
+    TEXT: {
+      bg: isDark ? "$gray7" : "$gray3",
+      color: isDark ? "$gray12" : "$gray11",
+    },
+    DEFAULT: {
+      bg: isDark ? "$gray5" : "$gray2",
+      color: isDark ? "$gray12" : "$gray11",
+    },
   };
 };
 
+// --- Helper: 取得對應類型的 Icon (用於背景浮水印) ---
+const getWidgetIcon = (type: string) => {
+  switch (type) {
+    case "CHART":
+      return BarChart2;
+    case "TABLE":
+      return Table;
+    case "KPI":
+      return Activity;
+    case "GAUGE":
+      return Gauge;
+    case "MAP":
+      return MapIcon;
+    case "TEXT":
+      return Type;
+    default:
+      return LayoutGrid;
+  }
+};
+
+// --- Helper: 陣列分塊 ---
 function chunkArray<T>(arr: T[], size: number): T[][] {
   const result: T[][] = [];
   for (let i = 0; i < arr.length; i += size) {
@@ -52,7 +111,8 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
 
 const DashboardStudioScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
-  const theme = useTheme();
+  const themeValues = useTheme();
+  const { theme } = useThemeStore();
   const { currentDashboard, loading, fetchDefaultDashboard, updateDashboard } =
     useDashboardStore();
 
@@ -98,7 +158,7 @@ const DashboardStudioScreen: React.FC = () => {
     );
   }
 
-  const widgetGradients = getWidgetGradients();
+  const widgetColors = getWidgetColors(theme as "light" | "dark");
   const hasWidgets = currentDashboard.widgets.length > 0;
 
   return (
@@ -110,13 +170,14 @@ const DashboardStudioScreen: React.FC = () => {
         left={0}
         right={0}
         height={180}
-        // ✅ 修正：這裡加入了判斷式，編輯模式時會變成綠色漸層
         colors={
           editMode
-            ? ["$energyGreen6", "$energyGreen7"]
-            : ["$activeBlue8", "$activeBlue9"]
+            ? ["$green7", "$green8"]
+            : theme === "dark"
+            ? ["$blue7", "$blue8"]
+            : ["$blue5", "$blue6"]
         }
-        opacity={0.12}
+        opacity={theme === "dark" ? 0.2 : 0.15}
         zIndex={-1}
       />
       <XStack
@@ -129,19 +190,19 @@ const DashboardStudioScreen: React.FC = () => {
         ai="center"
         jc="space-between"
         shadowColor="$shadowColor"
-        shadowOpacity={0.1}
-        shadowRadius={20}
-        shadowOffset={{ width: 0, height: 4 }}
+        shadowOpacity={0.05}
+        shadowRadius={10}
+        shadowOffset={{ width: 0, height: 2 }}
       >
         <YStack>
           <H2 color="$color" fontWeight="800">
             {currentDashboard.name}
           </H2>
           <XStack ai="center" gap="$2" mt="$1">
-            <Text color={editMode ? "$success" : "$brand"} fontSize="$4">
+            <Text color={editMode ? "$green10" : "$blue10"} fontSize="$4">
               {editMode ? "編輯模式中" : "預覽模式"}
             </Text>
-            {editMode && <Sparkles size={16} color="$success" />}
+            {editMode && <Sparkles size={16} color="$green10" />}
           </XStack>
         </YStack>
 
@@ -152,12 +213,12 @@ const DashboardStudioScreen: React.FC = () => {
           <Button
             onPress={handleToggleEditMode}
             size="$4"
-            bg={editMode ? "$success" : "$brand"}
-            color="white"
+            bg={editMode ? "$green9" : "$blue9"}
+            color="$color"
             fontWeight="600"
             iconAfter={editMode ? undefined : <Settings size={18} />}
             hoverStyle={{
-              bg: editMode ? "$energyGreen7" : "$activeBlue7",
+              bg: editMode ? "$green10" : "$blue10",
             }}
           >
             {editMode ? "完成儲存" : "編輯儀表板"}
@@ -177,9 +238,16 @@ const DashboardStudioScreen: React.FC = () => {
             {chunkArray(currentDashboard.widgets, 2).map((row, rowIndex) => (
               <XStack key={rowIndex} gap="$4">
                 {row.map((widget) => {
-                  const gradient =
-                    widgetGradients[widget.type.toUpperCase()] ||
-                    widgetGradients.DEFAULT;
+                  const colors =
+                    widgetColors[widget.type.toUpperCase()] ||
+                    widgetColors.DEFAULT;
+
+                  // 決定邊框顏色：編輯模式為綠色，預覽模式為極淡的細線 (提升銳利度)
+                  const currentBorderColor = editMode
+                    ? "$green9"
+                    : theme === "dark"
+                    ? "rgba(255,255,255,0.1)"
+                    : "rgba(0,0,0,0.05)";
 
                   return (
                     <Motion.View
@@ -187,98 +255,143 @@ const DashboardStudioScreen: React.FC = () => {
                       initial={{ opacity: 0, y: 30 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.9 }}
+                      whileTap={{ scale: 0.98 }} // 輕微按壓回饋
                     >
                       <Card
                         flex={1}
                         height={widget.size.height * 70 + 40}
                         onPress={() => editMode && handleEditWidget(widget)}
                         borderWidth={editMode ? 3 : 1}
-                        borderColor={editMode ? "$success" : "$borderColor"}
+                        borderColor={currentBorderColor}
                         borderStyle={editMode ? "dashed" : "solid"}
-                        elevate
+                        // 優化陰影質感
+                        shadowColor="$shadowColor"
+                        shadowOpacity={0.1}
+                        shadowRadius={8}
+                        shadowOffset={{ width: 0, height: 4 }}
                         overflow="hidden"
-                        hoverStyle={
-                          editMode ? { scale: 1.03, y: -4 } : { scale: 1.02 }
-                        }
-                        pressStyle={{ scale: 0.98 }}
-                        bg="$backgroundHover"
+                        bg={colors.bg} // 保持原有背景色
                       >
-                        <LinearGradient
+                        {/* --- 設計升級：背景浮水印 Icon (Watermark) --- */}
+                        <YStack
                           position="absolute"
-                          top={0}
-                          left={0}
-                          right={0}
-                          bottom={0}
-                          colors={gradient}
-                          opacity={0.85}
-                        />
-                        <YStack p="$4" flex={1} zIndex={1}>
-                          <XStack jc="space-between" ai="center">
+                          bottom={-15}
+                          right={-15}
+                          opacity={0.15} // 極低透明度，若隱若現
+                          rotate="-15deg"
+                          zIndex={0}
+                          pointerEvents="none"
+                        >
+                          {React.createElement(getWidgetIcon(widget.type), {
+                            size: 100,
+                            color: colors.color, // 跟隨該 Widget 類型的文字色
+                          })}
+                        </YStack>
+
+                        {/* 卡片內容層 */}
+                        <YStack p="$3.5" flex={1} zIndex={1} jc="space-between">
+                          {/* 上半部：標題與設定 */}
+                          <XStack jc="space-between" ai="flex-start">
                             <Paragraph
-                              color="white"
-                              fontWeight="700"
-                              fontSize="$6"
-                              textShadowColor="rgba(0,0,0.4)"
+                              color={colors.color}
+                              fontWeight="800"
+                              fontSize="$5"
+                              lineHeight="$5"
+                              numberOfLines={2}
+                              flex={1}
+                              mr="$2"
+                              // 文字陰影增加層次
+                              textShadowColor="rgba(0,0,0,0.1)"
                               textShadowOffset={{ width: 0, height: 1 }}
-                              textShadowRadius={4}
+                              textShadowRadius={2}
                             >
                               {widget.title}
                             </Paragraph>
+
                             {editMode && (
                               <Motion.View whileTap={{ rotate: 90 }}>
                                 <Button
                                   size="$2"
                                   circular
                                   icon={Settings}
-                                  bg="white"
+                                  bg="rgba(255,255,255,0.8)" // 半透明白底
                                   opacity={0.9}
                                   color="$color"
+                                  elevation={2}
                                 />
                               </Motion.View>
                             )}
                           </XStack>
 
-                          <YStack flex={1} jc="center" ai="center" gap="$2">
-                            <Paragraph
-                              color="white"
-                              fontWeight="500"
-                              opacity={0.9}
-                            >
-                              {widget.type.replace(/_/g, " ")}
-                            </Paragraph>
+                          {/* 下半部：資訊膠囊 (Chips) */}
+                          <XStack gap="$2" ai="flex-end" flexWrap="wrap">
+                            {/* 類型標籤 */}
                             <XStack
-                              bg="rgba(255,255,255,0.2)"
-                              px="$3"
+                              bg="rgba(0,0,0,0.1)" // 深色半透明底
+                              px="$2"
                               py="$1"
-                              borderRadius="$3"
+                              borderRadius="$4"
                               ai="center"
-                              gap="$1"
                             >
-                              <LayoutGrid size={14} color="white" />
-                              <Text color="white" fontSize="$2">
-                                {widget.size.width} × {widget.size.height}
+                              <Text
+                                color={colors.color}
+                                fontSize="$1"
+                                fontWeight="700"
+                                opacity={0.9}
+                                letterSpacing={0.5}
+                              >
+                                {widget.type}
                               </Text>
                             </XStack>
-                          </YStack>
 
+                            {/* 尺寸標籤 */}
+                            <XStack
+                              bg="rgba(255,255,255,0.25)" // 亮色半透明底 (Glass effect)
+                              px="$2"
+                              py="$1"
+                              borderRadius="$4"
+                              ai="center"
+                              gap="$1.5"
+                            >
+                              <LayoutGrid size={10} color={colors.color} />
+                              <Text
+                                color={colors.color}
+                                fontSize="$1"
+                                fontWeight="700"
+                              >
+                                {widget.size.width}×{widget.size.height}
+                              </Text>
+                            </XStack>
+                          </XStack>
+
+                          {/* 隱藏狀態遮罩 */}
                           {!widget.visible && (
                             <XStack
                               position="absolute"
-                              top={8}
-                              right={8}
-                              bg="$red9"
-                              px="$2"
-                              py="$1"
-                              borderRadius="$2"
-                              opacity={0.9}
+                              top={0}
+                              left={0}
+                              right={0}
+                              bottom={0}
+                              bg="rgba(0,0,0,0.5)"
+                              jc="center"
+                              ai="center"
+                              zIndex={10}
+                              backdropFilter="blur(2px)"
                             >
-                              <Text
-                                color="white"
-                                fontSize="$1"
-                                fontWeight="600"
+                              <XStack
+                                bg="$red9"
+                                px="$3"
+                                py="$1.5"
+                                borderRadius="$4"
                               >
-                                已隱藏
-                              </Text>
+                                <Text
+                                  color="white"
+                                  fontSize="$3"
+                                  fontWeight="bold"
+                                >
+                                  已隱藏
+                                </Text>
+                              </XStack>
                             </XStack>
                           )}
                         </YStack>
@@ -299,13 +412,13 @@ const DashboardStudioScreen: React.FC = () => {
                       height={180}
                       bg="$backgroundHover"
                       borderWidth={3}
-                      borderColor="$success"
+                      borderColor="$green9"
                       borderStyle="dashed"
                       jc="center"
                       ai="center"
                       gap="$3"
                       onPress={handleAddWidget}
-                      hoverStyle={{ bg: "$energyGreen1" }}
+                      hoverStyle={{ bg: "$green2" }}
                     >
                       <Motion.View
                         animate={{ rotate: [0, 360] }}
@@ -315,16 +428,16 @@ const DashboardStudioScreen: React.FC = () => {
                           ease: "linear",
                         }}
                       >
-                        <Plus size={36} color="$success" />
+                        <Plus size={36} color="$green10" />
                       </Motion.View>
                       <Paragraph
                         fontSize="$6"
                         fontWeight="700"
-                        color="$success"
+                        color="$green10"
                       >
                         新增元件
                       </Paragraph>
-                      <Paragraph fontSize="$3" color="$success">
+                      <Paragraph fontSize="$3" color="$green10">
                         點擊選擇你要的 Widget
                       </Paragraph>
                     </Card>
@@ -352,7 +465,7 @@ const DashboardStudioScreen: React.FC = () => {
             {editMode && (
               <Button
                 size="$5"
-                bg="$success"
+                bg="$green9"
                 mt="$8"
                 onPress={handleAddWidget}
                 icon={<Plus />}
@@ -379,17 +492,16 @@ const DashboardStudioScreen: React.FC = () => {
               right: 0,
               padding: 20,
               paddingBottom: 40,
-              // ✅ 使用主題背景色，避免變成透明或錯誤顏色
-              backgroundColor: theme.background.val,
+              backgroundColor: themeValues.background.val,
               borderTopWidth: 1,
-              borderColor: theme.borderColor.val,
+              borderColor: themeValues.borderColor.val,
             }}
           >
             <XStack gap="$4">
               <Button
                 flex={1}
                 icon={<Plus />}
-                bg="$success"
+                bg="$green9"
                 size="$4"
                 onPress={handleAddWidget}
               >
@@ -398,7 +510,7 @@ const DashboardStudioScreen: React.FC = () => {
               <Button
                 flex={1}
                 icon={<LayoutGrid />}
-                bg="$brand"
+                bg="$blue9"
                 size="$4"
                 onPress={() => navigation.navigate("DragDropEditor" as never)}
               >

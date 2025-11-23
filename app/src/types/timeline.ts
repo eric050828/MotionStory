@@ -38,6 +38,7 @@ export interface CreateMilestoneRequest {
 }
 
 export interface TimelineEvent {
+  location: unknown;
   id: string;
   date: string;
   type: 'workout' | 'achievement' | 'milestone';
