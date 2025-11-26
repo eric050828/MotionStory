@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback } from "react";
-import { FlatList, RefreshControl } from "react-native";
+import { FlatList, RefreshControl, useWindowDimensions } from "react-native";
 import { YStack, XStack, Text, View, Circle, Button, Spinner } from "tamagui";
 import { Inbox } from "@tamagui/lucide-icons";
 import { useTimelineStore } from "../../store/timelineStore";
@@ -9,32 +9,32 @@ import TimelineSkeleton from "../../components/ui/TimelineSkeleton";
 
 // --- 子組件：背景中心線 ---
 // 獨立出來是為了保證滾動時線條不斷裂
-const CentralLine = () => (
+const CentralLine = ({ isMobile }: { isMobile: boolean }) => (
   <View
     position="absolute"
-    left="50%"
+    left={isMobile ? 25 : "50%"}
     top={0}
     bottom={0}
     width={2}
     bg="$borderColor" // 確保你的 tamagui config 有這個顏色，或者用 $gray5
-    ml={-1} // 修正中心點 (width 2 / 2)
+    ml={isMobile ? 0 : -1} // 修正中心點 (width 2 / 2)
     opacity={0.5}
     zIndex={0}
   />
 );
 
 // --- 子組件：時間軸節點 ---
-const TimelineDot = () => (
+const TimelineDot = ({ isMobile }: { isMobile: boolean }) => (
   <YStack
     position="absolute"
-    left="50%"
+    left={isMobile ? 25 : "50%"}
     top={0} // 重要：Top 0 確保與該 Row 的頂部對齊
     x={-10} // 修正水平位置 (Size 20 / 2)
     zIndex={10}
     alignItems="center"
     justifyContent="center"
   >
-    <Circle
+    {/* <Circle
       size={20}
       bg="$background"
       borderWidth={2}
@@ -46,7 +46,7 @@ const TimelineDot = () => (
       shadowOpacity={0.2}
     >
       <Circle size={8} bg="$brand" />
-    </Circle>
+    </Circle> */}
   </YStack>
 );
 
@@ -54,9 +54,11 @@ const TimelineDot = () => (
 const DateComponent = ({
   date,
   alignRight,
+  isMobile,
 }: {
   date: string;
   alignRight: boolean;
+  isMobile: boolean;
 }) => {
   const dateObj = new Date(date);
   const day = dateObj.getDate();
@@ -65,17 +67,18 @@ const DateComponent = ({
 
   return (
     <YStack
-      flex={1}
+      flex={isMobile ? 0 : 1}
       alignItems={alignRight ? "flex-end" : "flex-start"}
       pt="$1" // 微調：視覺上對齊卡片文字的頂部
       px="$4"
       animation="lazy"
       enterStyle={{ opacity: 0, x: alignRight ? -10 : 10 }}
+      mb={isMobile ? "$2" : 0}
     >
       <Text
-        fontSize="$9"
+        fontSize={isMobile ? "$7" : "$9"}
         fontWeight="900"
-        lineHeight="$9"
+        lineHeight={isMobile ? "$7" : "$9"}
         color="$color"
         style={{ includeFontPadding: false }}
       >
@@ -130,6 +133,7 @@ const EventsComponent = ({
 );
 
 const TimelineScreen = () => {
+  const { width } = useWindowDimensions();
   const { groups, loading, error, fetchTimeline } = useTimelineStore();
 
   const handleRefresh = useCallback(() => {
@@ -149,14 +153,39 @@ const TimelineScreen = () => {
     index: number;
   }) => {
     const isEven = index % 2 === 0;
+    const isMobile = width < 768;
 
+    if (isMobile) {
+      // Mobile layout: single column
+      return (
+        <XStack width="100%" position="relative" minHeight={80} mb="$4">
+          <View width={50}>
+            <TimelineDot isMobile={isMobile} />
+          </View>
+          <YStack flex={1}>
+            <DateComponent
+              date={group.date}
+              alignRight={false}
+              isMobile={isMobile}
+            />
+            <EventsComponent events={group.events} alignRight={false} />
+          </YStack>
+        </XStack>
+      );
+    }
+
+    // Desktop layout: alternating columns
     return (
       <XStack width="100%" position="relative" minHeight={80}>
-
+        <TimelineDot isMobile={isMobile} />
         {isEven ? (
           // 偶數行：日期在左，事件在右
           <>
-            <DateComponent date={group.date} alignRight={true} />
+            <DateComponent
+              date={group.date}
+              alignRight={true}
+              isMobile={isMobile}
+            />
             <View width={30} /> {/* 中間保留空間給 Dot */}
             <EventsComponent events={group.events} alignRight={false} />
           </>
@@ -165,7 +194,11 @@ const TimelineScreen = () => {
           <>
             <EventsComponent events={group.events} alignRight={true} />
             <View width={30} />
-            <DateComponent date={group.date} alignRight={false} />
+            <DateComponent
+              date={group.date}
+              alignRight={false}
+              isMobile={isMobile}
+            />
           </>
         )}
       </XStack>
@@ -187,7 +220,12 @@ const TimelineScreen = () => {
       <Text color="$color" fontSize="$5" opacity={0.7}>
         No memories found yet.
       </Text>
-      <Button onPress={handleRefresh} size="$3" variant="outlined" color="$color">
+      <Button
+        onPress={handleRefresh}
+        size="$3"
+        variant="outlined"
+        color="$color"
+      >
         Refresh
       </Button>
     </YStack>
@@ -216,7 +254,9 @@ const TimelineScreen = () => {
         <Text color="$color" fontSize="$3" opacity={0.7}>
           {error.message}
         </Text>
-        <Button onPress={handleRefresh} bg="$red9" color="white">Retry</Button>
+        <Button onPress={handleRefresh} bg="$red9" color="white">
+          Retry
+        </Button>
       </YStack>
     );
   }
@@ -224,7 +264,7 @@ const TimelineScreen = () => {
   return (
     <YStack flex={1} backgroundColor="$background" position="relative">
       {/* 絕對定位的背景線，貫穿整個畫面 */}
-      <CentralLine />
+      <CentralLine isMobile={width < 768} />
 
       <FlatList
         data={groups}

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Alert } from "react-native";
+import { Alert, useWindowDimensions } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
@@ -110,6 +110,7 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
 }
 
 const DashboardStudioScreen: React.FC = () => {
+  const { width } = useWindowDimensions();
   const navigation = useNavigation<NavigationProp>();
   const themeValues = useTheme();
   const { theme } = useThemeStore();
@@ -158,6 +159,17 @@ const DashboardStudioScreen: React.FC = () => {
     );
   }
 
+  const numColumns = width < 768 ? 1 : 2;
+  const paddingHorizontal = 16; // from ScrollView contentContainerStyle
+  const gap = 16; // from XStack gap="$4"
+
+  const availableContentWidth = width - 2 * paddingHorizontal;
+  const cardWidth =
+    numColumns === 1
+      ? availableContentWidth
+      : (availableContentWidth - gap) / 2;
+
+  const widgetChunks = chunkArray(currentDashboard.widgets, numColumns);
   const widgetColors = getWidgetColors(theme as "light" | "dark");
   const hasWidgets = currentDashboard.widgets.length > 0;
 
@@ -235,7 +247,7 @@ const DashboardStudioScreen: React.FC = () => {
       >
         {hasWidgets ? (
           <YStack gap="$4">
-            {chunkArray(currentDashboard.widgets, 2).map((row, rowIndex) => (
+            {widgetChunks.map((row, rowIndex) => (
               <XStack key={rowIndex} gap="$4">
                 {row.map((widget) => {
                   const colors =
@@ -249,9 +261,13 @@ const DashboardStudioScreen: React.FC = () => {
                     ? "rgba(255,255,255,0.1)"
                     : "rgba(0,0,0,0.05)";
 
+                  const calculatedCardHeight =
+                    (cardWidth / widget.size.width) * widget.size.height;
+
                   return (
                     <Motion.View
                       key={widget.id}
+                      style={{ width: cardWidth }}
                       initial={{ opacity: 0, y: 30 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.9 }}
@@ -259,7 +275,7 @@ const DashboardStudioScreen: React.FC = () => {
                     >
                       <Card
                         flex={1}
-                        height={widget.size.height * 70 + 40}
+                        height={calculatedCardHeight}
                         onPress={() => editMode && handleEditWidget(widget)}
                         borderWidth={editMode ? 3 : 1}
                         borderColor={currentBorderColor}
@@ -351,7 +367,6 @@ const DashboardStudioScreen: React.FC = () => {
                               py="$1"
                               borderRadius="$4"
                               ai="center"
-                              gap="$1.5"
                             >
                               <LayoutGrid size={10} color={colors.color} />
                               <Text
@@ -399,6 +414,7 @@ const DashboardStudioScreen: React.FC = () => {
                     </Motion.View>
                   );
                 })}
+                {numColumns > 1 && row.length === 1 && <YStack flex={1} />}
 
                 {/* 新增 Widget 按鈕 */}
                 {editMode && rowIndex === 0 && (
