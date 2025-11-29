@@ -1,203 +1,224 @@
-/**
- * Login Screen
- * 使用者登入畫面 - Email/密碼 + Google OAuth
- */
-
-import React, { useState } from 'react';
+import React, { useState } from "react";
+import { KeyboardAvoidingView, Platform, Alert } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import {
-  View,
-  Text,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
+  YStack,
+  XStack,
+  H3,
+  Paragraph,
+  Input,
+  Button,
+  Label,
   ScrollView,
-  Alert,
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { useAuthStore } from '../store/useAuthStore';
-import { Button } from '../components/Button';
-import { Input } from '../components/Input';
-import { extractErrorMessage } from '../utils/errorHandler';
+  Separator,
+  Spinner,
+  Card,
+  H2,
+} from "tamagui";
+import { useAuthStore } from "../store/useAuthStore";
+import { extractErrorMessage } from "../utils/errorHandler";
+import { Lock, Mail } from "@tamagui/lucide-icons";
+
+const ErrorText = ({ children }: { children: React.ReactNode }) => (
+  <Paragraph color="$red10" size="$2" mt="$1">
+    {children}
+  </Paragraph>
+);
 
 export const LoginScreen: React.FC = () => {
   const navigation = useNavigation();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [emailError, setEmailError] = useState('');
-  const [passwordError, setPasswordError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
 
-  const { login, googleLogin, isLoading } = useAuthStore();
+  const { login, isLoading } = useAuthStore();
 
-  const validateEmail = (email: string): boolean => {
+  const validateEmail = (text: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email) {
-      setEmailError('Email 為必填欄位');
+    if (!text) {
+      setEmailError("Email 為必填欄位");
       return false;
     }
-    if (!emailRegex.test(email)) {
-      setEmailError('Email 格式不正確');
+    if (!emailRegex.test(text)) {
+      setEmailError("Email 格式不正確");
       return false;
     }
-    setEmailError('');
+    setEmailError("");
     return true;
   };
 
-  const validatePassword = (password: string): boolean => {
-    if (!password) {
-      setPasswordError('密碼為必填欄位');
+  const validatePassword = (text: string): boolean => {
+    if (!text) {
+      setPasswordError("密碼為必填欄位");
       return false;
     }
-    if (password.length < 8) {
-      setPasswordError('密碼至少需要 8 個字元');
+    if (text.length < 6) {
+      setPasswordError("密碼至少需要 6 個字元");
       return false;
     }
-    setPasswordError('');
+    setPasswordError("");
     return true;
   };
 
   const handleLogin = async () => {
     const isEmailValid = validateEmail(email);
     const isPasswordValid = validatePassword(password);
-
-    if (!isEmailValid || !isPasswordValid) {
-      return;
-    }
+    if (!isEmailValid || !isPasswordValid) return;
 
     try {
       await login(email, password);
-      // Navigation will be handled by auth state change
     } catch (error: any) {
-      Alert.alert('登入失敗', extractErrorMessage(error, '請檢查您的帳號密碼'));
+      Alert.alert("登入失敗", extractErrorMessage(error, "請檢查您的帳號密碼"));
     }
   };
 
-  const handleGoogleLogin = async () => {
-    try {
-      // TODO: 實作 Google OAuth
-      Alert.alert('開發中', 'Google 登入功能開發中');
-    } catch (error) {
-      Alert.alert('登入失敗', 'Google 登入發生錯誤');
-    }
+  const handleGoogleLogin = () => {
+    Alert.alert("開發中", "Google 登入功能開發中");
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <YStack
+      flex={1}
+      backgroundColor="$background"
+      justifyContent="center"
+      padding="$4"
     >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>MotionStory</Text>
-          <Text style={styles.subtitle}>運動追蹤與動機平台</Text>
-        </View>
+        <ScrollView
+          contentContainerStyle={{ justifyContent: "center", flexGrow: 1 }}
+        >
+          <Card
+            elevate
+            bordered
+            padding="$5"
+            animation="bouncy"
+            enterStyle={{ o: 0, y: -10 }}
+          >
+            <Card.Header>
+              <YStack alignItems="center" space="$2" marginBottom="$4">
+                <XStack>
+                  <H2 color="$brand" fontWeight="bold">Motion</H2>
+                  <H2>Story</H2>
+                </XStack>
+                <Paragraph theme="alt2">
+                  Sign in to your account
+                </Paragraph>
+              </YStack>
+            </Card.Header>
 
-        <View style={styles.form}>
-          <Input
-            label="Email"
-            value={email}
-            onChangeText={(text) => {
-              setEmail(text);
-              setEmailError('');
-            }}
-            placeholder="請輸入 Email"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            error={emailError}
-          />
+            <YStack space="$4" marginTop="$4">
+              <YStack>
+                <Label htmlFor="email">Email</Label>
+                <XStack
+                  alignItems="center"
+                  space="$3"
+                  borderWidth={1}
+                  borderColor="$borderColor"
+                  borderRadius="$4"
+                  paddingHorizontal="$3"
+                  focusStyle={{ borderColor: "$brand" }}
+                >
+                  <Mail color="$color7" />
+                  <Input
+                    flex={1}
+                    id="email"
+                    value={email}
+                    onChangeText={(text) => {
+                      setEmail(text);
+                      if (emailError) validateEmail(text);
+                    }}
+                    onBlur={() => validateEmail(email)}
+                    placeholder="name@example.com"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    borderWidth={0}
+                    backgroundColor="transparent"
+                    focusStyle={{ backgroundColor: "transparent" }}
+                  />
+                </XStack>
+                {!!emailError && <ErrorText>{emailError}</ErrorText>}
+              </YStack>
 
-          <Input
-            label="密碼"
-            value={password}
-            onChangeText={(text) => {
-              setPassword(text);
-              setPasswordError('');
-            }}
-            placeholder="請輸入密碼"
-            isPassword
-            error={passwordError}
-          />
+              <YStack>
+                <Label htmlFor="password">Password</Label>
+                <XStack
+                  alignItems="center"
+                  space="$3"
+                  borderWidth={1}
+                  borderColor="$borderColor"
+                  borderRadius="$4"
+                  paddingHorizontal="$3"
+                  focusStyle={{ borderColor: "$brand" }}
+                >
+                  <Lock color="$color7" />
+                  <Input
+                    flex={1}
+                    id="password"
+                    value={password}
+                    onChangeText={(text) => {
+                      setPassword(text);
+                      if (passwordError) validatePassword(text);
+                    }}
+                    onBlur={() => validatePassword(password)}
+                    placeholder="••••••••"
+                    secureTextEntry
+                    borderWidth={0}
+                    backgroundColor="transparent"
+                    focusStyle={{ backgroundColor: "transparent" }}
+                  />
+                </XStack>
+                {!!passwordError && <ErrorText>{passwordError}</ErrorText>}
+              </YStack>
 
-          <Button
-            title="登入"
-            onPress={handleLogin}
-            loading={isLoading}
-            style={styles.loginButton}
-          />
+              <Button
+                backgroundColor="$brand"
+                color="$background"
+                pressStyle={{ backgroundColor: "$brandHover" }}
+                size="$4"
+                onPress={handleLogin}
+                disabled={isLoading}
+                icon={isLoading ? <Spinner /> : undefined}
+                marginTop="$2"
+              >
+                Sign In
+              </Button>
 
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>或</Text>
-            <View style={styles.dividerLine} />
-          </View>
+              <XStack alignItems="center" space>
+                <Separator flex={1} />
+                <Paragraph size="$2" theme="alt2">
+                  OR
+                </Paragraph>
+                <Separator flex={1} />
+              </XStack>
 
-          <Button
-            title="使用 Google 登入"
-            onPress={handleGoogleLogin}
-            variant="outline"
-            disabled={isLoading}
-          />
+              <Button
+                variant="outlined"
+                size="$4"
+                onPress={handleGoogleLogin}
+                disabled={isLoading}
+                // icon={<GoogleIcon />} // You can add a custom Google icon component here
+              >
+                Sign In with Google
+              </Button>
+            </YStack>
 
-          <Button
-            title="還沒有帳號？立即註冊"
-            onPress={() => navigation.navigate('Register' as never)}
-            variant="secondary"
-            style={styles.registerButton}
-          />
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+            <Card.Footer marginTop="$4">
+              <Paragraph size="$2" theme="alt2">
+                Don't have an account?{" "}
+              </Paragraph>
+              <Button
+                size="$2"
+                onPress={() => navigation.navigate("Register" as never)}
+              >
+                Sign Up
+              </Button>
+            </Card.Footer>
+          </Card>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </YStack>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: 24,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 48,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#007AFF',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-  },
-  form: {
-    width: '100%',
-  },
-  loginButton: {
-    marginTop: 8,
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#DDD',
-  },
-  dividerText: {
-    marginHorizontal: 16,
-    color: '#999',
-    fontSize: 14,
-  },
-  registerButton: {
-    marginTop: 16,
-  },
-});

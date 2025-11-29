@@ -2,21 +2,24 @@
  * Image caching utilities using expo-image
  * Optimized for achievement share cards, avatars, and workout images
  */
-import { Image } from 'expo-image';
-import * as FileSystem from 'expo-file-system';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Image } from "expo-image";
+import * as FileSystem from "expo-file-system";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import React from "react";
 
 const CACHE_DIR = `${FileSystem.cacheDirectory}images/`;
 const MAX_CACHE_SIZE_MB = 50;
 const CACHE_EXPIRY_DAYS = 7;
-const CACHE_METADATA_KEY = '@imageCache:metadata';
+const CACHE_METADATA_KEY = "@imageCache:metadata";
+
+type ImageType = "avatar" | "achievement" | "workout" | "other";
 
 interface CacheMetadata {
   [uri: string]: {
     localUri: string;
     size: number;
     timestamp: number;
-    type: 'avatar' | 'achievement' | 'workout' | 'other';
+    type: "avatar" | "achievement" | "workout" | "other";
   };
 }
 
@@ -51,7 +54,7 @@ export class ImageCacheManager {
       // Clean up expired cache on init
       await this.cleanExpiredCache();
     } catch (error) {
-      console.error('Failed to initialize image cache:', error);
+      console.error("Failed to initialize image cache:", error);
     }
   }
 
@@ -60,7 +63,7 @@ export class ImageCacheManager {
    */
   async getCachedUri(
     uri: string,
-    type: 'avatar' | 'achievement' | 'workout' | 'other' = 'other'
+    type: "avatar" | "achievement" | "workout" | "other" = "other"
   ): Promise<string> {
     await this.initialize();
 
@@ -89,7 +92,8 @@ export class ImageCacheManager {
 
       if (downloadResult.status === 200) {
         const fileInfo = await FileSystem.getInfoAsync(localUri);
-        const size = fileInfo.size || 0;
+        const size =
+          fileInfo.exists && !fileInfo.isDirectory ? fileInfo.size ?? 0 : 0;
 
         // Add to metadata
         this.metadata[uri] = {
@@ -107,7 +111,7 @@ export class ImageCacheManager {
         return localUri;
       }
     } catch (error) {
-      console.error('Failed to cache image:', error);
+      console.error("Failed to cache image:", error);
     }
 
     // Return original URI if caching fails
@@ -117,10 +121,11 @@ export class ImageCacheManager {
   /**
    * Preload images for better UX
    */
-  async preloadImages(uris: string[], type: 'avatar' | 'achievement' | 'workout' = 'other') {
+
+  async preloadImages(uris: string[], type: ImageType) {
     await this.initialize();
 
-    const promises = uris.map(uri => this.getCachedUri(uri, type));
+    const promises = uris.map((uri) => this.getCachedUri(uri, type));
     await Promise.allSettled(promises);
   }
 
@@ -134,14 +139,14 @@ export class ImageCacheManager {
       this.metadata = {};
       await this.saveMetadata();
     } catch (error) {
-      console.error('Failed to clear cache:', error);
+      console.error("Failed to clear cache:", error);
     }
   }
 
   /**
    * Clear specific type of cached images
    */
-  async clearCacheByType(type: 'avatar' | 'achievement' | 'workout' | 'other') {
+  async clearCacheByType(type: "avatar" | "achievement" | "workout" | "other") {
     const urisToDelete = Object.entries(this.metadata)
       .filter(([_, meta]) => meta.type === type)
       .map(([uri]) => uri);
@@ -162,7 +167,7 @@ export class ImageCacheManager {
         delete this.metadata[uri];
         await this.saveMetadata();
       } catch (error) {
-        console.error('Failed to delete cached image:', error);
+        console.error("Failed to delete cached image:", error);
       }
     }
   }
@@ -185,8 +190,8 @@ export class ImageCacheManager {
       totalFiles: entries.length,
       totalSizeMB: (totalSize / (1024 * 1024)).toFixed(2),
       byType,
-      oldestEntry: entries.reduce((oldest, meta) =>
-        meta.timestamp < oldest ? meta.timestamp : oldest,
+      oldestEntry: entries.reduce(
+        (oldest, meta) => (meta.timestamp < oldest ? meta.timestamp : oldest),
         Date.now()
       ),
     };
@@ -219,7 +224,9 @@ export class ImageCacheManager {
     if (totalSize <= maxSizeBytes) return;
 
     // Sort by timestamp (oldest first)
-    const sortedEntries = entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+    const sortedEntries = entries.sort(
+      (a, b) => a[1].timestamp - b[1].timestamp
+    );
 
     // Delete oldest entries until under limit
     let currentSize = totalSize;
@@ -239,11 +246,11 @@ export class ImageCacheManager {
     let hash = 0;
     for (let i = 0; i < uri.length; i++) {
       const char = uri.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = (hash << 5) - hash + char;
       hash = hash & hash;
     }
 
-    const extension = uri.split('.').pop()?.split('?')[0] || 'jpg';
+    const extension = uri.split(".").pop()?.split("?")[0] || "jpg";
     return `${Math.abs(hash)}.${extension}`;
   }
 
@@ -252,9 +259,12 @@ export class ImageCacheManager {
    */
   private async saveMetadata() {
     try {
-      await AsyncStorage.setItem(CACHE_METADATA_KEY, JSON.stringify(this.metadata));
+      await AsyncStorage.setItem(
+        CACHE_METADATA_KEY,
+        JSON.stringify(this.metadata)
+      );
     } catch (error) {
-      console.error('Failed to save cache metadata:', error);
+      console.error("Failed to save cache metadata:", error);
     }
   }
 }
@@ -266,13 +276,13 @@ export const imageCacheManager = new ImageCacheManager();
  * Configure expo-image cache settings
  */
 export function configureImageCache() {
-  // Configure expo-image to use disk cache
   Image.clearDiskCache = async () => {
     await imageCacheManager.clearCache();
+    return true;
   };
 
-  Image.clearMemoryCache = () => {
-    // expo-image handles memory cache automatically
+  Image.clearMemoryCache = async () => {
+    return true; // expo-image 自帶記憶體快取
   };
 }
 
@@ -281,18 +291,18 @@ export function configureImageCache() {
  */
 export interface CachedImageProps {
   uri: string;
-  type?: 'avatar' | 'achievement' | 'workout' | 'other';
+  type?: "avatar" | "achievement" | "workout" | "other";
   style?: any;
-  contentFit?: 'contain' | 'cover' | 'fill' | 'none' | 'scale-down';
+  contentFit?: "contain" | "cover" | "fill" | "none" | "scale-down";
   placeholder?: string;
   transition?: number;
 }
 
 export const CachedImage: React.FC<CachedImageProps> = ({
   uri,
-  type = 'other',
+  type = "other",
   style,
-  contentFit = 'cover',
+  contentFit = "cover",
   placeholder,
   transition = 300,
 }) => {
@@ -318,13 +328,16 @@ export const CachedImage: React.FC<CachedImageProps> = ({
  * Avatar caching utilities
  */
 export const AvatarCache = {
-  async preloadAvatars(userIds: string[], getAvatarUri: (id: string) => string) {
+  async preloadAvatars(
+    userIds: string[],
+    getAvatarUri: (id: string) => string
+  ) {
     const uris = userIds.map(getAvatarUri);
-    await imageCacheManager.preloadImages(uris, 'avatar');
+    await imageCacheManager.preloadImages(uris, "avatar");
   },
 
   async clearAvatarCache() {
-    await imageCacheManager.clearCacheByType('avatar');
+    await imageCacheManager.clearCacheByType("avatar");
   },
 };
 
@@ -333,16 +346,19 @@ export const AvatarCache = {
  */
 export const AchievementShareCache = {
   async cacheShareCard(achievementId: string, imageUri: string) {
-    await imageCacheManager.getCachedUri(imageUri, 'achievement');
+    await imageCacheManager.getCachedUri(imageUri, "achievement");
   },
 
-  async preloadShareCards(achievementIds: string[], getShareCardUri: (id: string) => string) {
+  async preloadShareCards(
+    achievementIds: string[],
+    getShareCardUri: (id: string) => string
+  ) {
     const uris = achievementIds.map(getShareCardUri);
-    await imageCacheManager.preloadImages(uris, 'achievement');
+    await imageCacheManager.preloadImages(uris, "achievement");
   },
 
   async clearShareCardCache() {
-    await imageCacheManager.clearCacheByType('achievement');
+    await imageCacheManager.clearCacheByType("achievement");
   },
 };
 
@@ -350,13 +366,16 @@ export const AchievementShareCache = {
  * Workout image caching
  */
 export const WorkoutImageCache = {
-  async cacheWorkoutImages(workoutIds: string[], getImageUri: (id: string) => string) {
+  async cacheWorkoutImages(
+    workoutIds: string[],
+    getImageUri: (id: string) => string
+  ) {
     const uris = workoutIds.map(getImageUri);
-    await imageCacheManager.preloadImages(uris, 'workout');
+    await imageCacheManager.preloadImages(uris, "workout");
   },
 
   async clearWorkoutImageCache() {
-    await imageCacheManager.clearCacheByType('workout');
+    await imageCacheManager.clearCacheByType("workout");
   },
 };
 

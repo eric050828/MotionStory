@@ -1,250 +1,334 @@
-/**
- * T158: SettingsScreen
- * 使用者設定畫面
- */
-
-import React, { useState } from 'react';
+import React, { useState } from "react";
+import { Alert } from "react-native";
 import {
-  View,
-  Text,
-  StyleSheet,
+  Avatar,
+  Button,
+  H4,
+  Paragraph,
   ScrollView,
   Switch,
-  TouchableOpacity,
-  Alert,
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { useAuthStore } from '../../store/useAuthStore';
-import { Button } from '../../components/Button';
+  XStack,
+  YStack,
+  Text,
+  Separator,
+  Spacer,
+  Theme,
+  View,
+} from "tamagui";
+import {
+  LogOut,
+  MapPin,
+  BarChart2,
+  Bell,
+  Moon,
+  Globe,
+  Ruler,
+  ChevronRight,
+  User,
+  Smartphone,
+  Shield,
+  Palette,
+} from "@tamagui/lucide-icons";
+import { useAuthStore } from "../../store/useAuthStore";
+import { useThemeStore } from "../../store/useThemeStore";
+
+// --- 重用組件：設定群組容器 ---
+const SettingsGroup = ({
+  children,
+  title,
+}: {
+  children: React.ReactNode;
+  title?: string;
+}) => (
+  <YStack space="$2" mb="$4">
+    {title && (
+      <Text
+        fontSize="$3"
+        color="$gray10"
+        fontWeight="600"
+        ml="$3"
+        textTransform="uppercase"
+      >
+        {title}
+      </Text>
+    )}
+    <YStack
+      backgroundColor="$background"
+      borderRadius="$4"
+      borderWidth={1}
+      borderColor="$borderColor"
+      overflow="hidden"
+      separator={<Separator borderColor="$borderColor" />}
+    >
+      {children}
+    </YStack>
+  </YStack>
+);
+
+// --- 重用組件：單個設定項目 ---
+interface SettingItemProps {
+  icon: React.ReactNode;
+  label: string;
+  rightContent?: React.ReactNode;
+  onPress?: () => void;
+  isDestructive?: boolean;
+}
+
+const SettingItem = ({
+  icon,
+  label,
+  rightContent,
+  onPress,
+  isDestructive,
+}: SettingItemProps) => {
+  return (
+    <XStack
+      padding="$3.5"
+      alignItems="center"
+      justifyContent="space-between"
+      pressStyle={onPress ? { backgroundColor: "$gray3" } : undefined}
+      onPress={onPress}
+      backgroundColor="$background"
+    >
+      <XStack space="$3" alignItems="center">
+        {/* 圖示容器 */}
+        <View
+          backgroundColor={isDestructive ? "$red2" : "$gray3"}
+          padding="$2"
+          borderRadius="$3"
+        >
+          {React.cloneElement(icon as React.ReactElement, {
+            size: 18,
+            color: isDestructive ? "$red10" : "$color",
+          })}
+        </View>
+        <Text
+          fontSize="$5"
+          fontWeight="500"
+          color={isDestructive ? "$red10" : "$color"}
+        >
+          {label}
+        </Text>
+      </XStack>
+
+      {/* 右側內容 (Switch, 文字, 或箭頭) */}
+      <XStack alignItems="center" space="$2">
+        {rightContent}
+        {onPress && !rightContent && <ChevronRight size={18} color="$gray9" />}
+      </XStack>
+    </XStack>
+  );
+};
 
 const SettingsScreen: React.FC = () => {
-  const navigation = useNavigation();
   const { user, logout, updatePrivacySettings } = useAuthStore();
+  const { theme, setTheme } = useThemeStore();
 
-  const [settings, setSettings] = useState({
-    shareLocation: user?.privacy_settings.share_location || false,
-    shareStats: user?.privacy_settings.share_detailed_stats || false,
-    notifications: true,
-    language: 'zh-TW',
-    units: 'metric',
-  });
+  // 本地狀態 (如果需要樂觀更新 UI)
+  const [loading, setLoading] = useState(false);
 
-  const handleToggle = (key: string) => {
-    setSettings((prev) => ({ ...prev, [key]: !prev[key as keyof typeof prev] }));
-  };
-
-  const handleSave = async () => {
+  // 處理開關切換 (自動儲存)
+  const handleTogglePrivacy = async (
+    key: "share_location" | "share_detailed_stats",
+    value: boolean
+  ) => {
+    // 這裡可以做樂觀更新 (Optimistic UI)，這裡簡化直接呼叫 API
     try {
       await updatePrivacySettings({
-        share_location: settings.shareLocation,
-        share_detailed_stats: settings.shareStats,
+        ...user?.privacy_settings, // 保持其他設定不變
+        [key]: value,
       });
-      Alert.alert('儲存成功', '設定已更新');
+      // 不需要 Alert，開關本身就是回饋，除非失敗
     } catch (err) {
-      Alert.alert('儲存失敗', '請稍後再試');
+      Alert.alert("更新失敗", "無法更新設定，請檢查網路連線");
     }
   };
 
   const handleLogout = () => {
-    Alert.alert('登出', '確定要登出嗎？', [
-      { text: '取消', style: 'cancel' },
+    Alert.alert("登出", "確定要登出目前的帳號嗎？", [
+      { text: "取消", style: "cancel" },
       {
-        text: '登出',
-        style: 'destructive',
+        text: "登出",
+        style: "destructive",
         onPress: async () => {
+          setLoading(true);
           await logout();
+          setLoading(false);
         },
       },
     ]);
   };
 
+  // 主題切換按鈕 (Segmented Control 風格)
+  const ThemeSelector = () => (
+    <XStack backgroundColor="$gray3" p="$1" borderRadius="$4">
+      {(["light", "dark", "system"] as const).map((t) => {
+        const isActive = theme === t;
+        return (
+          <Button
+            key={t}
+            flex={1}
+            size="$3"
+            chromeless={!isActive}
+            theme={isActive ? "active" : undefined}
+            backgroundColor={isActive ? "$background" : "transparent"}
+            color={isActive ? "$color" : "$gray10"}
+            borderRadius="$3"
+            onPress={() => setTheme(t)}
+            animation="quick"
+            pressStyle={{ opacity: 0.8 }}
+          >
+            {t === "light" ? "淺色" : t === "dark" ? "深色" : "系統"}
+          </Button>
+        );
+      })}
+    </XStack>
+  );
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Profile Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>個人資料</Text>
-        <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {user?.display_name.charAt(0).toUpperCase()}
-            </Text>
-          </View>
-          <View style={styles.profileInfo}>
-            <Text style={styles.userName}>{user?.display_name}</Text>
-            <Text style={styles.userEmail}>{user?.email}</Text>
-          </View>
-        </View>
-      </View>
+    <ScrollView backgroundColor="$gray2" showsVerticalScrollIndicator={false}>
+      <YStack padding="$4" space="$5" paddingBottom="$10">
+        {/* Header Title */}
+        <H4 fontWeight="800" marginTop="$2">
+          設定
+        </H4>
 
-      {/* Privacy Settings */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>隱私設定</Text>
+        {/* 1. 用戶資料卡片 (大頭貼) */}
+        {user && (
+          <XStack
+            backgroundColor="$background"
+            borderRadius="$5"
+            padding="$4"
+            alignItems="center"
+            space="$4"
+            borderWidth={1}
+            borderColor="$borderColor"
+          >
+            <Avatar circular size="$8">
+              <Avatar.Image
+                src={`https://ui-avatars.com/api/?name=${user.display_name}`}
+              />
+              <Avatar.Fallback backgroundColor="$blue10" />
+            </Avatar>
+            <YStack flex={1}>
+              <Text fontSize="$6" fontWeight="700">
+                {user.display_name}
+              </Text>
+              <Text fontSize="$3" color="$gray10">
+                {user.email}
+              </Text>
+              <XStack marginTop="$2">
+                <View
+                  backgroundColor="$green3"
+                  px="$2"
+                  py="$1"
+                  borderRadius="$3"
+                >
+                  <Text fontSize="$2" color="$green10" fontWeight="600">
+                    免費會員
+                  </Text>
+                </View>
+              </XStack>
+            </YStack>
+          </XStack>
+        )}
 
-        <View style={styles.settingItem}>
-          <View style={styles.settingInfo}>
-            <Text style={styles.settingLabel}>分享位置資訊</Text>
-            <Text style={styles.settingDescription}>允許在運動記錄中顯示位置</Text>
-          </View>
-          <Switch
-            value={settings.shareLocation}
-            onValueChange={() => handleToggle('shareLocation')}
+        {/* 2. 外觀與體驗 */}
+        <SettingsGroup title="外觀與體驗">
+          {/* 主題選擇器比較特殊，我們把它放在 Group 裡面但自定義佈局 */}
+          <YStack padding="$3.5" space="$3">
+            <XStack space="$3" alignItems="center" marginBottom="$2">
+              <View backgroundColor="$gray3" padding="$2" borderRadius="$3">
+                <Palette size={18} color="$color" />
+              </View>
+              <Text fontSize="$5" fontWeight="500">
+                主題模式
+              </Text>
+            </XStack>
+            <ThemeSelector />
+          </YStack>
+
+          <SettingItem
+            icon={<Globe />}
+            label="語言"
+            rightContent={<Text color="$gray10">繁體中文</Text>}
+            onPress={() => console.log("Nav to Language")}
           />
-        </View>
-
-        <View style={styles.settingItem}>
-          <View style={styles.settingInfo}>
-            <Text style={styles.settingLabel}>分享詳細統計</Text>
-            <Text style={styles.settingDescription}>在公開資料中顯示詳細數據</Text>
-          </View>
-          <Switch
-            value={settings.shareStats}
-            onValueChange={() => handleToggle('shareStats')}
+          <SettingItem
+            icon={<Ruler />}
+            label="單位"
+            rightContent={<Text color="$gray10">公制 (km, kg)</Text>}
+            onPress={() => console.log("Nav to Units")}
           />
-        </View>
-      </View>
+        </SettingsGroup>
 
-      {/* App Settings */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>應用程式設定</Text>
-
-        <TouchableOpacity style={styles.settingItem}>
-          <View style={styles.settingInfo}>
-            <Text style={styles.settingLabel}>語言</Text>
-            <Text style={styles.settingValue}>繁體中文</Text>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.settingItem}>
-          <View style={styles.settingInfo}>
-            <Text style={styles.settingLabel}>單位</Text>
-            <Text style={styles.settingValue}>公制 (公里、公斤)</Text>
-          </View>
-        </TouchableOpacity>
-
-        <View style={styles.settingItem}>
-          <View style={styles.settingInfo}>
-            <Text style={styles.settingLabel}>推播通知</Text>
-          </View>
-          <Switch
-            value={settings.notifications}
-            onValueChange={() => handleToggle('notifications')}
+        {/* 3. 隱私與通知 (即時開關) */}
+        <SettingsGroup title="隱私權限">
+          <SettingItem
+            icon={<MapPin />}
+            label="分享位置資訊"
+            rightContent={
+              <Switch
+                size="$3"
+                defaultChecked={user?.privacy_settings.share_location}
+                onCheckedChange={(val) =>
+                  handleTogglePrivacy("share_location", val)
+                }
+              >
+                <Switch.Thumb animation="bouncy" />
+              </Switch>
+            }
           />
-        </View>
-      </View>
+          <SettingItem
+            icon={<BarChart2 />}
+            label="公開詳細統計"
+            rightContent={
+              <Switch
+                size="$3"
+                defaultChecked={user?.privacy_settings.share_detailed_stats}
+                onCheckedChange={(val) =>
+                  handleTogglePrivacy("share_detailed_stats", val)
+                }
+              >
+                <Switch.Thumb animation="bouncy" />
+              </Switch>
+            }
+          />
+          <SettingItem
+            icon={<Bell />}
+            label="推播通知"
+            rightContent={
+              <Switch size="$3" defaultChecked={true}>
+                <Switch.Thumb animation="bouncy" />
+              </Switch>
+            }
+          />
+        </SettingsGroup>
 
-      {/* Account Actions */}
-      <View style={styles.section}>
-        <Button
-          title="儲存設定"
-          onPress={handleSave}
-          style={styles.saveButton}
-        />
+        {/* 4. 安全性與帳號 */}
+        <SettingsGroup title="帳號管理">
+          <SettingItem
+            icon={<Shield />}
+            label="隱私權政策"
+            onPress={() => console.log("Privacy Policy")}
+          />
+          <SettingItem
+            icon={<LogOut />}
+            label="登出"
+            isDestructive
+            onPress={handleLogout}
+          />
+        </SettingsGroup>
 
-        <Button
-          title="登出"
-          onPress={handleLogout}
-          variant="outline"
-          style={styles.logoutButton}
-        />
-      </View>
+        {/* 底部版本資訊 */}
+        <YStack alignItems="center" opacity={0.5}>
+          <Text fontSize="$2" color="$gray10">
+            Version 1.0.2 (Build 45)
+          </Text>
+        </YStack>
+      </YStack>
     </ScrollView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  content: {
-    padding: 16,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 12,
-  },
-  profileCard: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#2196F3',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  avatarText: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  profileInfo: {
-    flex: 1,
-  },
-  userName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
-  },
-  userEmail: {
-    fontSize: 14,
-    color: '#666',
-  },
-  settingItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  settingInfo: {
-    flex: 1,
-    marginRight: 16,
-  },
-  settingLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
-    marginBottom: 4,
-  },
-  settingDescription: {
-    fontSize: 13,
-    color: '#666',
-  },
-  settingValue: {
-    fontSize: 14,
-    color: '#2196F3',
-  },
-  saveButton: {
-    marginBottom: 12,
-  },
-  logoutButton: {
-    borderColor: '#F44336',
-  },
-});
 
 export default SettingsScreen;

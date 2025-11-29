@@ -1,197 +1,288 @@
-/**
- * T155: TimelineScreen
- * 時間軸顯示 - 運動、成就、里程碑混合
- */
+import React, { useEffect, useCallback } from "react";
+import { FlatList, RefreshControl, useWindowDimensions } from "react-native";
+import { YStack, XStack, Text, View, Circle, Button, Spinner } from "tamagui";
+import { Inbox } from "@tamagui/lucide-icons";
+import { useTimelineStore } from "../../store/timelineStore";
+import TimelineEventCard from "../../components/Card/TimelineEventCard";
+import { TimelineGroup, TimelineEvent } from "../../types/timeline";
+import TimelineSkeleton from "../../components/ui/TimelineSkeleton";
 
-import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  RefreshControl,
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { TimelineEvent, TIMELINE_EVENT_COLORS } from '../../types/timeline';
-import timelineService from '../../services/timelineService';
-import { Loading } from '../../components/ui/Loading';
+// --- 子組件：背景中心線 ---
+// 獨立出來是為了保證滾動時線條不斷裂
+const CentralLine = ({ isMobile }: { isMobile: boolean }) => (
+  <View
+    position="absolute"
+    left={isMobile ? 25 : "50%"}
+    top={0}
+    bottom={0}
+    width={2}
+    bg="$borderColor" // 確保你的 tamagui config 有這個顏色，或者用 $gray5
+    ml={isMobile ? 0 : -1} // 修正中心點 (width 2 / 2)
+    opacity={0.5}
+    zIndex={0}
+  />
+);
 
-const TimelineScreen: React.FC = () => {
-  const navigation = useNavigation();
-  const [events, setEvents] = useState<TimelineEvent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
+// --- 子組件：時間軸節點 ---
+const TimelineDot = ({ isMobile }: { isMobile: boolean }) => (
+  <YStack
+    position="absolute"
+    left={isMobile ? 25 : "50%"}
+    top={0} // 重要：Top 0 確保與該 Row 的頂部對齊
+    x={-10} // 修正水平位置 (Size 20 / 2)
+    zIndex={10}
+    alignItems="center"
+    justifyContent="center"
+  >
+    {/* <Circle
+      size={20}
+      bg="$background"
+      borderWidth={2}
+      borderColor="$brand" // 你的品牌色
+      elevation="$1"
+      shadowColor="$brand"
+      shadowRadius={4}
+      shadowOffset={{ width: 0, height: 2 }}
+      shadowOpacity={0.2}
+    >
+      <Circle size={8} bg="$brand" />
+    </Circle> */}
+  </YStack>
+);
 
-  useEffect(() => {
-    fetchTimeline();
-  }, []);
-
-  const fetchTimeline = async (refresh = false) => {
-    try {
-      const response = await timelineService.getTimeline({
-        limit: 20,
-        offset: refresh ? 0 : (page - 1) * 20,
-      });
-
-      if (refresh) {
-        setEvents(response.events);
-        setPage(1);
-      } else {
-        setEvents((prev) => [...prev, ...response.events]);
-      }
-
-      setHasMore(response.has_more);
-      setLoading(false);
-      setRefreshing(false);
-    } catch (error) {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  const handleRefresh = () => {
-    setRefreshing(true);
-    fetchTimeline(true);
-  };
-
-  const handleLoadMore = () => {
-    if (!loading && hasMore) {
-      setPage((p) => p + 1);
-      fetchTimeline();
-    }
-  };
-
-  const handleEventPress = (event: TimelineEvent) => {
-    if (event.type === 'workout') {
-      navigation.navigate('WorkoutDetail' as never, { workoutId: event.data.id } as never);
-    }
-  };
-
-  const renderEvent = ({ item }: { item: TimelineEvent }) => {
-    const colors = TIMELINE_EVENT_COLORS[item.type];
-    const date = new Date(item.date);
-
-    return (
-      <TouchableOpacity
-        style={styles.eventCard}
-        onPress={() => handleEventPress(item)}
-      >
-        <View style={[styles.eventIndicator, { backgroundColor: colors.border }]} />
-
-        <View style={styles.eventContent}>
-          <View style={[styles.eventIcon, { backgroundColor: colors.bg }]}>
-            <Text style={styles.iconText}>{item.icon || '📍'}</Text>
-          </View>
-
-          <View style={styles.eventDetails}>
-            <Text style={styles.eventTitle}>{item.title}</Text>
-            {item.description && (
-              <Text style={styles.eventDescription}>{item.description}</Text>
-            )}
-            <Text style={styles.eventDate}>
-              {date.toLocaleDateString('zh-TW')} {date.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}
-            </Text>
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
-  if (loading && events.length === 0) {
-    return <Loading />;
-  }
+// --- 子組件：日期顯示 ---
+const DateComponent = ({
+  date,
+  alignRight,
+  isMobile,
+}: {
+  date: string;
+  alignRight: boolean;
+  isMobile: boolean;
+}) => {
+  const dateObj = new Date(date);
+  const day = dateObj.getDate();
+  const month = dateObj.toLocaleDateString("en-US", { month: "short" });
+  const year = dateObj.getFullYear();
 
   return (
-    <View style={styles.container}>
-      <FlatList
-        data={events}
-        renderItem={renderEvent}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-        }
-        onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.5}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>暫無時間軸事件</Text>
-          </View>
-        }
-      />
-    </View>
+    <YStack
+      flex={isMobile ? 0 : 1}
+      alignItems={alignRight ? "flex-end" : "flex-start"}
+      pt="$1" // 微調：視覺上對齊卡片文字的頂部
+      px="$4"
+      animation="lazy"
+      enterStyle={{ opacity: 0, x: alignRight ? -10 : 10 }}
+      mb={isMobile ? "$2" : 0}
+    >
+      <Text
+        fontSize={isMobile ? "$7" : "$9"}
+        fontWeight="900"
+        lineHeight={isMobile ? "$7" : "$9"}
+        color="$color"
+        style={{ includeFontPadding: false }}
+      >
+        {day}
+      </Text>
+      <XStack gap="$1.5" opacity={0.6}>
+        <Text
+          fontSize="$3"
+          fontWeight="700"
+          textTransform="uppercase"
+          color="$color"
+        >
+          {month}
+        </Text>
+        <Text fontSize="$3" fontWeight="400" color="$color">
+          {year}
+        </Text>
+      </XStack>
+    </YStack>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  listContent: {
-    padding: 16,
-  },
-  eventCard: {
-    flexDirection: 'row',
-    marginBottom: 16,
-  },
-  eventIndicator: {
-    width: 4,
-    borderRadius: 2,
-    marginRight: 12,
-  },
-  eventContent: {
-    flex: 1,
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  eventIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  iconText: {
-    fontSize: 24,
-  },
-  eventDetails: {
-    flex: 1,
-  },
-  eventTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
-  },
-  eventDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
-  },
-  eventDate: {
-    fontSize: 12,
-    color: '#999',
-  },
-  emptyState: {
-    paddingTop: 60,
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#999',
-  },
-});
+// --- 子組件：事件列表 ---
+const EventsComponent = ({
+  events,
+  alignRight,
+}: {
+  events: TimelineEvent[];
+  alignRight: boolean;
+}) => (
+  <YStack
+    flex={1}
+    px="$3"
+    pb="$6" // 組與組之間的垂直間距
+    gap="$3" // 卡片之間的間距
+    animation="lazy"
+    enterStyle={{ opacity: 0, scale: 0.98, y: 10 }}
+  >
+    {events.map((event) => (
+      <View
+        key={event.id}
+        width="100%"
+        alignSelf={alignRight ? "flex-end" : "flex-start"} // 確保卡片靠著中線
+      >
+        <TimelineEventCard
+          event={event}
+          onPress={() => console.log("Pressed event:", event.id)}
+        />
+      </View>
+    ))}
+  </YStack>
+);
+
+const TimelineScreen = () => {
+  const { width } = useWindowDimensions();
+  const { groups, loading, error, fetchTimeline } = useTimelineStore();
+
+  const handleRefresh = useCallback(() => {
+    fetchTimeline({});
+  }, [fetchTimeline]);
+
+  useEffect(() => {
+    handleRefresh();
+  }, [handleRefresh]);
+
+  // 渲染每一行 (日期 + 卡片)
+  const renderTimelineGroup = ({
+    item: group,
+    index,
+  }: {
+    item: TimelineGroup;
+    index: number;
+  }) => {
+    const isEven = index % 2 === 0;
+    const isMobile = width < 768;
+
+    if (isMobile) {
+      // Mobile layout: single column
+      return (
+        <XStack width="100%" position="relative" minHeight={80} mb="$4">
+          <View width={50}>
+            <TimelineDot isMobile={isMobile} />
+          </View>
+          <YStack flex={1}>
+            <DateComponent
+              date={group.date}
+              alignRight={false}
+              isMobile={isMobile}
+            />
+            <EventsComponent events={group.events} alignRight={false} />
+          </YStack>
+        </XStack>
+      );
+    }
+
+    // Desktop layout: alternating columns
+    return (
+      <XStack width="100%" position="relative" minHeight={80}>
+        <TimelineDot isMobile={isMobile} />
+        {isEven ? (
+          // 偶數行：日期在左，事件在右
+          <>
+            <DateComponent
+              date={group.date}
+              alignRight={true}
+              isMobile={isMobile}
+            />
+            <View width={30} /> {/* 中間保留空間給 Dot */}
+            <EventsComponent events={group.events} alignRight={false} />
+          </>
+        ) : (
+          // 奇數行：事件在左，日期在右
+          <>
+            <EventsComponent events={group.events} alignRight={true} />
+            <View width={30} />
+            <DateComponent
+              date={group.date}
+              alignRight={false}
+              isMobile={isMobile}
+            />
+          </>
+        )}
+      </XStack>
+    );
+  };
+
+  // 空狀態顯示
+  const renderEmptyComponent = () => (
+    <YStack
+      flex={1}
+      alignItems="center"
+      justifyContent="center"
+      py="$10"
+      gap="$4"
+    >
+      <Circle size={80} bg="$backgroundHover">
+        <Inbox size={40} color="$color" />
+      </Circle>
+      <Text color="$color" fontSize="$5" opacity={0.7}>
+        No memories found yet.
+      </Text>
+      <Button
+        onPress={handleRefresh}
+        size="$3"
+        variant="outlined"
+        color="$color"
+      >
+        Refresh
+      </Button>
+    </YStack>
+  );
+
+  // 列表標頭
+  const renderHeader = () => (
+    <YStack py="$4" px="$4" mb="$2">
+      <Text fontSize="$8" fontWeight="bold" color="$color">
+        Timeline
+      </Text>
+      <Text fontSize="$3" color="$color" opacity={0.7}>
+        Your journey, step by step.
+      </Text>
+    </YStack>
+  );
+
+  // 初始化 Loading
+  if (loading && !groups.length) return <TimelineSkeleton />;
+
+  // 錯誤狀態
+  if (error && !groups.length) {
+    return (
+      <YStack flex={1} alignItems="center" justifyContent="center" gap="$4">
+        <Text color="$red9">Error loading data</Text>
+        <Text color="$color" fontSize="$3" opacity={0.7}>
+          {error.message}
+        </Text>
+        <Button onPress={handleRefresh} bg="$red9" color="white">
+          Retry
+        </Button>
+      </YStack>
+    );
+  }
+
+  return (
+    <YStack flex={1} backgroundColor="$background" position="relative">
+      {/* 絕對定位的背景線，貫穿整個畫面 */}
+      <CentralLine isMobile={width < 768} />
+
+      <FlatList
+        data={groups}
+        renderItem={renderTimelineGroup}
+        keyExtractor={(item) => item.date}
+        contentContainerStyle={{
+          paddingBottom: 60,
+          paddingTop: 20,
+        }}
+        ListHeaderComponent={renderHeader}
+        ListEmptyComponent={renderEmptyComponent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={handleRefresh} />
+        }
+      />
+    </YStack>
+  );
+};
 
 export default TimelineScreen;
