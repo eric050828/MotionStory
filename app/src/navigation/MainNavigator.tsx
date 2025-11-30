@@ -34,6 +34,7 @@ import SettingsScreen from "../screens/profile/SettingsScreen";
 
 // Social Stack
 import SocialScreen from "../screens/social/SocialScreen";
+import ActivityDetailScreen from "../screens/social/ActivityDetailScreen";
 
 import { WorkoutStackParamList } from "../types/navigation";
 
@@ -109,6 +110,11 @@ const SocialNavigator = () => (
       name="Social"
       component={SocialScreen}
       options={{ title: "社群動態" }}
+    />
+    <SocialStack.Screen
+      name="ActivityDetail"
+      component={ActivityDetailScreen}
+      options={{ headerShown: false }}
     />
   </SocialStack.Navigator>
 );

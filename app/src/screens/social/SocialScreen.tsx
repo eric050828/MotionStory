@@ -4,8 +4,8 @@
  */
 
 import React, { useEffect, useCallback } from 'react'
-import { View, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native'
-import { useNavigation } from '@react-navigation/native'
+import { View, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity } from 'react-native'
+import { useNavigation, NavigationProp } from '@react-navigation/native'
 import { YStack, XStack, H2, Text, Card, useTheme } from 'tamagui'
 import {
   Activity,
@@ -20,9 +20,14 @@ import {
 import { useSocialStore } from '../../store/socialStore'
 import type { Activity as ActivityType } from '../../types/social'
 
+type SocialStackParamList = {
+  Social: undefined
+  ActivityDetail: { activity: ActivityType }
+}
+
 export default function SocialScreen() {
   const theme = useTheme()
-  const navigation = useNavigation()
+  const navigation = useNavigation<NavigationProp<SocialStackParamList>>()
   const {
     activities,
     feedLoading,
@@ -66,6 +71,10 @@ export default function SocialScreen() {
   // Render activity item
   const renderActivityItem = useCallback(({ item }: { item: ActivityType }) => {
     return (
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={() => navigation.navigate('ActivityDetail', { activity: item })}
+      >
       <Card
         elevate
         bordered
@@ -145,8 +154,9 @@ export default function SocialScreen() {
           </XStack>
         </XStack>
       </Card>
+      </TouchableOpacity>
     )
-  }, [theme, toggleLike])
+  }, [theme, toggleLike, navigation])
 
   // Empty component
   const renderEmpty = () => {
