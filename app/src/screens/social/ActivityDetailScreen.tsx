@@ -46,6 +46,9 @@ export default function ActivityDetailScreen() {
   const [submitting, setSubmitting] = useState(false)
   const [localActivity, setLocalActivity] = useState(activity)
 
+  // Get loading state for this specific activity
+  const isCommentsLoading = commentsLoading[activity.activity_id] || false
+
   // Fetch comments on mount
   useEffect(() => {
     fetchComments(activity.activity_id)
@@ -245,7 +248,7 @@ export default function ActivityDetailScreen() {
 
   // Render empty comments
   const renderEmptyComments = () => {
-    if (commentsLoading) return null
+    if (isCommentsLoading) return null
     return (
       <YStack alignItems="center" padding="$6">
         <MessageCircle size={32} color="$gray8" />
@@ -293,7 +296,7 @@ export default function ActivityDetailScreen() {
           ListHeaderComponent={renderHeader}
           ListEmptyComponent={renderEmptyComments}
           ListFooterComponent={
-            commentsLoading ? (
+            isCommentsLoading ? (
               <YStack alignItems="center" padding="$4">
                 <ActivityIndicator size="small" />
               </YStack>
