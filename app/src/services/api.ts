@@ -288,21 +288,21 @@ class ApiService {
   }
 
   async likeActivity(activityId: string) {
-    const response = await this.client.post(`/activities/${activityId}/like`);
+    const response = await this.client.post(`/social/activities/${activityId}/like`);
     return response.data;
   }
 
   async unlikeActivity(activityId: string) {
-    await this.client.delete(`/activities/${activityId}/like`);
+    await this.client.delete(`/social/activities/${activityId}/like`);
   }
 
   async getActivityComments(activityId: string, params?: { limit?: number; offset?: number }) {
-    const response = await this.client.get(`/activities/${activityId}/comments`, { params });
+    const response = await this.client.get(`/social/activities/${activityId}/comments`, { params });
     return response.data;
   }
 
   async createComment(activityId: string, data: { content: string }) {
-    const response = await this.client.post(`/activities/${activityId}/comment`, data);
+    const response = await this.client.post(`/social/activities/${activityId}/comment`, data);
     return response.data;
   }
 }
