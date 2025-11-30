@@ -33,6 +33,7 @@ import { Widget } from "../../types/dashboard";
 import { LinearGradient } from "tamagui/linear-gradient";
 import { Motion } from "@legendapp/motion";
 import { useThemeStore } from "../../store/useThemeStore";
+import { WidgetContentRenderer } from "../../components/widgets/WidgetContentRenderer";
 
 export type RootStackParamList = {
   Home: undefined;
@@ -305,79 +306,30 @@ const DashboardStudioScreen: React.FC = () => {
                         </YStack>
 
                         {/* 卡片內容層 */}
-                        <YStack p="$3.5" flex={1} zIndex={1} jc="space-between">
-                          {/* 上半部：標題與設定 */}
-                          <XStack jc="space-between" ai="flex-start">
-                            <Paragraph
-                              color={colors.color}
-                              fontWeight="800"
-                              fontSize="$5"
-                              lineHeight="$5"
-                              numberOfLines={2}
-                              flex={1}
-                              mr="$2"
-                              // 文字陰影增加層次
-                              textShadowColor="rgba(0,0,0,0.1)"
-                              textShadowOffset={{ width: 0, height: 1 }}
-                              textShadowRadius={2}
-                            >
-                              {widget.title}
-                            </Paragraph>
-
-                            {editMode && (
+                        <YStack p="$3" flex={1} zIndex={1}>
+                          {/* 編輯模式：顯示設定按鈕 */}
+                          {editMode && (
+                            <XStack jc="flex-end" mb="$2">
                               <Motion.View whileTap={{ rotate: 90 }}>
                                 <Button
                                   size="$2"
                                   circular
                                   icon={Settings}
-                                  bg="rgba(255,255,255,0.8)" // 半透明白底
+                                  bg="rgba(255,255,255,0.8)"
                                   opacity={0.9}
                                   color="$color"
                                   elevation={2}
                                 />
                               </Motion.View>
-                            )}
-                          </XStack>
-
-                          {/* 下半部：資訊膠囊 (Chips) */}
-                          <XStack gap="$2" ai="flex-end" flexWrap="wrap">
-                            {/* 類型標籤 */}
-                            <XStack
-                              bg="rgba(0,0,0,0.1)" // 深色半透明底
-                              px="$2"
-                              py="$1"
-                              borderRadius="$4"
-                              ai="center"
-                            >
-                              <Text
-                                color={colors.color}
-                                fontSize="$1"
-                                fontWeight="700"
-                                opacity={0.9}
-                                letterSpacing={0.5}
-                              >
-                                {widget.type}
-                              </Text>
                             </XStack>
+                          )}
 
-                            {/* 尺寸標籤 */}
-                            <XStack
-                              bg="rgba(255,255,255,0.25)" // 亮色半透明底 (Glass effect)
-                              px="$2"
-                              py="$1"
-                              borderRadius="$4"
-                              ai="center"
-                            >
-                              <LayoutGrid size={10} color={colors.color} />
-                              <Text
-                                color={colors.color}
-                                fontSize="$1"
-                                fontWeight="700"
-                              >
-                                {widget.size.width}×{widget.size.height}
-                              </Text>
-                            </XStack>
-                          </XStack>
+                          {/* Widget 內容 */}
+                          <WidgetContentRenderer
+                            widget={widget}
+                            colors={colors}
+                            compact={widget.size.height <= 2}
+                          />
 
                           {/* 隱藏狀態遮罩 */}
                           {!widget.visible && (

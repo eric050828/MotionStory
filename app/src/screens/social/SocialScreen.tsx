@@ -7,8 +7,18 @@ import React, { useEffect, useCallback } from 'react'
 import { View, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import { YStack, XStack, H2, Text, Card, useTheme } from 'tamagui'
+import {
+  Activity,
+  Trophy,
+  Target,
+  FileText,
+  User,
+  Heart,
+  MessageCircle,
+  Users
+} from '@tamagui/lucide-icons'
 import { useSocialStore } from '../../store/socialStore'
-import type { Activity } from '../../types/social'
+import type { Activity as ActivityType } from '../../types/social'
 
 export default function SocialScreen() {
   const theme = useTheme()
@@ -43,17 +53,18 @@ export default function SocialScreen() {
     }
   }, [hasMoreFeed, feedLoading, loadMoreFeed])
 
-  // Render activity item
-  const renderActivityItem = useCallback(({ item }: { item: Activity }) => {
-    const getActivityIcon = () => {
-      switch (item.activity_type) {
-        case 'workout': return '🏃'
-        case 'achievement': return '🏆'
-        case 'challenge': return '🎯'
-        default: return '📝'
-      }
+  // Get activity icon component
+  const getActivityIcon = (activityType: string) => {
+    switch (activityType) {
+      case 'workout': return <Activity size={16} color="$blue10" />
+      case 'achievement': return <Trophy size={16} color="$yellow10" />
+      case 'challenge': return <Target size={16} color="$green10" />
+      default: return <FileText size={16} color="$gray10" />
     }
+  }
 
+  // Render activity item
+  const renderActivityItem = useCallback(({ item }: { item: ActivityType }) => {
     return (
       <Card
         elevate
@@ -65,12 +76,12 @@ export default function SocialScreen() {
         {/* Header */}
         <XStack alignItems="center" gap="$3" marginBottom="$3">
           <View style={[styles.avatar, { backgroundColor: theme.gray5?.val }]}>
-            <Text fontSize={20}>👤</Text>
+            <User size={24} color={theme.gray10?.val} />
           </View>
           <YStack flex={1}>
             <XStack alignItems="center" gap="$2">
               <Text fontWeight="bold">{item.user_name}</Text>
-              <Text fontSize={16}>{getActivityIcon()}</Text>
+              {getActivityIcon(item.activity_type)}
             </XStack>
             <Text fontSize="$2" color="$gray10">
               {new Date(item.created_at).toLocaleDateString('zh-TW')}
@@ -101,7 +112,7 @@ export default function SocialScreen() {
 
         {item.activity_type === 'achievement' && item.content && (
           <YStack alignItems="center" padding="$3" marginBottom="$3">
-            <Text fontSize={40}>🏆</Text>
+            <Trophy size={48} color="$yellow10" />
             <Text fontWeight="bold" marginTop="$2">{(item.content as any).title || '新成就'}</Text>
             {(item.content as any).description && (
               <Text color="$gray10" textAlign="center" marginTop="$1">
@@ -119,13 +130,17 @@ export default function SocialScreen() {
             onPress={() => toggleLike(item.activity_id)}
             pressStyle={{ opacity: 0.7 }}
           >
-            <Text fontSize={18}>{item.is_liked_by_me ? '❤️' : '🤍'}</Text>
+            <Heart
+              size={20}
+              color={item.is_liked_by_me ? '$red10' : '$gray10'}
+              fill={item.is_liked_by_me ? theme.red10?.val : 'transparent'}
+            />
             <Text color={item.is_liked_by_me ? '$red10' : '$gray10'}>
               {item.likes_count > 0 ? item.likes_count : ''}
             </Text>
           </XStack>
           <XStack alignItems="center" gap="$2">
-            <Text fontSize={18}>💬</Text>
+            <MessageCircle size={20} color="$gray10" />
             <Text color="$gray10">{item.comments_count > 0 ? item.comments_count : ''}</Text>
           </XStack>
         </XStack>
@@ -138,8 +153,8 @@ export default function SocialScreen() {
     if (feedLoading) return null
     return (
       <YStack alignItems="center" justifyContent="center" padding="$6">
-        <Text fontSize={48} marginBottom="$3">👥</Text>
-        <Text color="$gray10">還沒有動態</Text>
+        <Users size={48} color="$gray8" />
+        <Text color="$gray10" marginTop="$3">還沒有動態</Text>
         <Text color="$gray10" fontSize="$2">開始運動來分享你的成果吧！</Text>
       </YStack>
     )
