@@ -44,7 +44,9 @@ const WorkoutDetailScreen: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    fetchWorkout(workoutId);
+    if (workoutId) {
+      fetchWorkout(workoutId);
+    }
   }, [workoutId]);
 
   const handleEdit = () => {

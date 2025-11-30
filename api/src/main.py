@@ -1,5 +1,6 @@
 """
 MotionStory API - FastAPI Application Entry Point
+# Reload trigger
 """
 
 from fastapi import FastAPI
@@ -16,6 +17,13 @@ from .routers import (
     achievements_router,
     dashboards_router,
     timeline_router,
+    # Phase 3: Social Features
+    friends_router,
+    social_router,
+    challenges_router,
+    notifications_router,
+    leaderboard_router,
+    profiles_router,
 )
 
 
@@ -23,12 +31,12 @@ from .routers import (
 async def lifespan(app: FastAPI):
     """應用程式生命週期管理"""
     # Startup
-    print("🚀 Starting MotionStory API...")
+    print("Starting MotionStory API...")
     await MongoDB.connect()
     initialize_firebase()
     yield
     # Shutdown
-    print("🛑 Shutting down MotionStory API...")
+    print("Shutting down MotionStory API...")
     await MongoDB.disconnect()
 
 
@@ -60,6 +68,14 @@ app.include_router(workouts_router, prefix="/api/v1")
 app.include_router(achievements_router, prefix="/api/v1")
 app.include_router(dashboards_router, prefix="/api/v1")
 app.include_router(timeline_router, prefix="/api/v1")
+
+# Phase 3: Social Features
+app.include_router(friends_router, prefix="/api/v1")
+app.include_router(social_router, prefix="/api/v1")
+app.include_router(challenges_router, prefix="/api/v1")
+app.include_router(notifications_router, prefix="/api/v1")
+app.include_router(leaderboard_router, prefix="/api/v1")
+app.include_router(profiles_router, prefix="/api/v1")
 
 
 @app.get("/")

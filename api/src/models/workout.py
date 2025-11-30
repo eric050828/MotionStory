@@ -83,7 +83,7 @@ class WorkoutInDB(WorkoutBase):
 
 class WorkoutResponse(WorkoutBase):
     """API 回傳的 Workout 模型"""
-    id: str = Field(..., alias="_id")
+    id: str = Field(..., validation_alias="_id")  # Accept _id input, output as id
     user_id: str
     created_at: datetime
     updated_at: datetime
@@ -116,3 +116,4 @@ class WorkoutExportFormat(BaseModel):
     date_from: Optional[datetime] = None
     date_to: Optional[datetime] = None
     workout_types: Optional[List[str]] = None
+

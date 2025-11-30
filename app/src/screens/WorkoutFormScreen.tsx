@@ -4,6 +4,7 @@
  */
 import React, { useState } from "react";
 import { Alert, Platform } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import {
   YStack,
   ScrollView,
@@ -59,6 +60,8 @@ export const WorkoutFormScreen: React.FC = () => {
   const [showTimePicker, setShowTimePicker] = useState(false);
 
   const theme = useTheme();
+
+  const navigation = useNavigation();
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
     setShowDatePicker(Platform.OS === "ios");
@@ -128,17 +131,27 @@ export const WorkoutFormScreen: React.FC = () => {
 
       if (response.achievements_triggered?.length > 0) {
         const achievementTitles = response.achievements_triggered
-
           .map((a: any) => a.metadata?.title || a.achievement_type)
-
           .join(", ");
 
-        Alert.alert("🎉 成就達成！", `恭喜你達成: ${achievementTitles}`);
+        if (Platform.OS === "web") {
+          window.alert(`🎉 成就達成！\n恭喜你達成: ${achievementTitles}`);
+          navigation.goBack();
+        } else {
+          Alert.alert("🎉 成就達成！", `恭喜你達成: ${achievementTitles}`, [
+            { text: "太棒了！", onPress: () => navigation.goBack() }
+          ]);
+        }
       } else {
-        Alert.alert("成功", "運動記錄已儲存！");
+        if (Platform.OS === "web") {
+          window.alert("成功：運動記錄已儲存！");
+          navigation.goBack();
+        } else {
+          Alert.alert("成功", "運動記錄已儲存！", [
+            { text: "確定", onPress: () => navigation.goBack() }
+          ]);
+        }
       }
-
-      // TODO: Navigate back after success
     } catch (error: any) {
       Alert.alert(
         "儲存失敗",

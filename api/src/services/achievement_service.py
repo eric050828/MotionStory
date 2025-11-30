@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Dict
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from bson import ObjectId
+from pymongo.errors import DuplicateKeyError
 
 from ..models import (
     AchievementBase,
@@ -83,12 +84,15 @@ class AchievementService:
             achieved_at=datetime.now(timezone.utc)
         )
 
-        result = await self.achievements_collection.insert_one(
-            achievement.dict(by_alias=True)
-        )
-
-        achievement.id = result.inserted_id
-        return AchievementResponse(**achievement.dict(by_alias=True))
+        try:
+            achievement_dict = achievement.dict(by_alias=True)
+            achievement_dict.pop("_id", None)
+            result = await self.achievements_collection.insert_one(achievement_dict)
+            achievement.id = result.inserted_id
+            return AchievementResponse(**achievement.dict(by_alias=True))
+        except DuplicateKeyError:
+            # Achievement already exists (race condition or previous failed attempt)
+            return None
 
     async def _check_streak_achievements(
         self, user_id: str, current_workout: WorkoutInDB
@@ -130,12 +134,15 @@ class AchievementService:
                         achieved_at=datetime.now(timezone.utc)
                     )
 
-                    result = await self.achievements_collection.insert_one(
-                        achievement.dict(by_alias=True)
-                    )
-
-                    achievement.id = result.inserted_id
-                    achievements.append(AchievementResponse(**achievement.dict(by_alias=True)))
+                    try:
+                        achievement_dict = achievement.dict(by_alias=True)
+                        achievement_dict.pop("_id", None)
+                        result = await self.achievements_collection.insert_one(achievement_dict)
+                        achievement.id = result.inserted_id
+                        achievements.append(AchievementResponse(**achievement.dict(by_alias=True)))
+                    except DuplicateKeyError:
+                        # Achievement already exists, skip
+                        pass
 
         return achievements
 
@@ -211,12 +218,15 @@ class AchievementService:
                         achieved_at=datetime.now(timezone.utc)
                     )
 
-                    result = await self.achievements_collection.insert_one(
-                        achievement.dict(by_alias=True)
-                    )
-
-                    achievement.id = result.inserted_id
-                    achievements.append(AchievementResponse(**achievement.dict(by_alias=True)))
+                    try:
+                        achievement_dict = achievement.dict(by_alias=True)
+                        achievement_dict.pop("_id", None)
+                        result = await self.achievements_collection.insert_one(achievement_dict)
+                        achievement.id = result.inserted_id
+                        achievements.append(AchievementResponse(**achievement.dict(by_alias=True)))
+                    except DuplicateKeyError:
+                        # Achievement already exists, skip
+                        pass
 
         return achievements
 
@@ -253,12 +263,15 @@ class AchievementService:
                         achieved_at=datetime.now(timezone.utc)
                     )
 
-                    result = await self.achievements_collection.insert_one(
-                        achievement.dict(by_alias=True)
-                    )
-
-                    achievement.id = result.inserted_id
-                    achievements.append(AchievementResponse(**achievement.dict(by_alias=True)))
+                    try:
+                        achievement_dict = achievement.dict(by_alias=True)
+                        achievement_dict.pop("_id", None)
+                        result = await self.achievements_collection.insert_one(achievement_dict)
+                        achievement.id = result.inserted_id
+                        achievements.append(AchievementResponse(**achievement.dict(by_alias=True)))
+                    except DuplicateKeyError:
+                        # Achievement already exists, skip
+                        pass
 
         return achievements
 

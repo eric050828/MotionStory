@@ -280,6 +280,31 @@ class ApiService {
     );
     return response.data;
   }
+
+  // Social endpoints
+  async getSocialFeed(params?: { limit?: number; cursor?: string }) {
+    const response = await this.client.get('/social/feed', { params });
+    return response.data;
+  }
+
+  async likeActivity(activityId: string) {
+    const response = await this.client.post(`/activities/${activityId}/like`);
+    return response.data;
+  }
+
+  async unlikeActivity(activityId: string) {
+    await this.client.delete(`/activities/${activityId}/like`);
+  }
+
+  async getActivityComments(activityId: string, params?: { limit?: number; offset?: number }) {
+    const response = await this.client.get(`/activities/${activityId}/comments`, { params });
+    return response.data;
+  }
+
+  async createComment(activityId: string, data: { content: string }) {
+    const response = await this.client.post(`/activities/${activityId}/comment`, data);
+    return response.data;
+  }
 }
 
 export const api = new ApiService();

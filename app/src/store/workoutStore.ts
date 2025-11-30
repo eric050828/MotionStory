@@ -63,17 +63,12 @@ const useWorkoutStore = create<WorkoutState>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      // Try to fetch from server if online
-      if (networkMonitor.isOnline()) {
-        const response = await workoutService.getWorkouts(filters || get().filters);
-        set({ workouts: response.workouts, loading: false });
-      } else {
-        // Fallback to local storage
-        const localWorkouts = await workoutStorage.getAll(filters || get().filters);
-        set({ workouts: localWorkouts, loading: false });
-      }
+      // Always try to fetch from server first
+      const response = await workoutService.getWorkouts(filters || get().filters);
+      set({ workouts: response.workouts, loading: false });
     } catch (error: any) {
-      // Fallback to local storage on error
+      // Fallback to local storage on error (e.g., offline)
+      console.log('API fetch failed, falling back to local storage:', error.message);
       try {
         const localWorkouts = await workoutStorage.getAll(filters || get().filters);
         set({ workouts: localWorkouts, loading: false, error: null });
@@ -88,15 +83,22 @@ const useWorkoutStore = create<WorkoutState>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      if (networkMonitor.isOnline()) {
-        const workout = await workoutService.getWorkout(id);
-        set({ currentWorkout: workout, loading: false });
-      } else {
-        const localWorkout = await workoutStorage.getByServerId(id);
-        set({ currentWorkout: localWorkout, loading: false });
-      }
+      // Always try to fetch from server first (consistent with fetchWorkouts)
+      const workout = await workoutService.getWorkout(id);
+      set({ currentWorkout: workout, loading: false });
     } catch (error: any) {
-      set({ error: error.message || 'Failed to fetch workout', loading: false });
+      // Fallback to local storage on error (e.g., offline)
+      console.log('API fetch failed, falling back to local storage:', error.message);
+      try {
+        const localWorkout = await workoutStorage.getByServerId(id);
+        if (localWorkout) {
+          set({ currentWorkout: localWorkout, loading: false, error: null });
+        } else {
+          set({ error: error.message || 'Failed to fetch workout', loading: false });
+        }
+      } catch (localError: any) {
+        set({ error: error.message || 'Failed to fetch workout', loading: false });
+      }
     }
   },
 

@@ -25,12 +25,12 @@ def initialize_firebase():
 
         cred = credentials.Certificate(cred_dict)
         firebase_admin.initialize_app(cred)
-        print("✅ Firebase Admin SDK initialized")
+        print(" Firebase Admin SDK initialized")
     except json.JSONDecodeError as e:
-        print(f"❌ Firebase initialization failed: Invalid JSON in FIREBASE_PRIVATE_KEY: {e}")
+        print(f" Firebase initialization failed: Invalid JSON in FIREBASE_PRIVATE_KEY: {e}")
         raise
     except Exception as e:
-        print(f"❌ Firebase initialization failed: {e}")
+        print(f" Firebase initialization failed: {e}")
         raise
 
 

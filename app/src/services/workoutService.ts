@@ -4,6 +4,7 @@
  */
 
 import axios, { AxiosInstance } from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   Workout,
   CreateWorkoutRequest,
@@ -12,7 +13,6 @@ import {
   WorkoutStats,
   WorkoutFilters,
 } from '../types/workout';
-import authService from './authService';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
@@ -27,10 +27,10 @@ class WorkoutService {
       },
     });
 
-    // Add auth token to requests
+    // Add auth token to requests from AsyncStorage
     this.api.interceptors.request.use(
-      (config) => {
-        const token = authService.getToken();
+      async (config) => {
+        const token = await AsyncStorage.getItem('access_token');
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }

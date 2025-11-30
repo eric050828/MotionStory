@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   Footprints,
   CalendarDays,
+  Users,
   User,
 } from "@tamagui/lucide-icons";
 
@@ -31,12 +32,16 @@ import TimelineScreen from "../screens/timeline/TimelineScreen";
 // Profile Stack
 import SettingsScreen from "../screens/profile/SettingsScreen";
 
+// Social Stack
+import SocialScreen from "../screens/social/SocialScreen";
+
 import { WorkoutStackParamList } from "../types/navigation";
 
 const Tab = createBottomTabNavigator();
 const DashboardStack = createNativeStackNavigator();
 const WorkoutStack = createNativeStackNavigator<WorkoutStackParamList>();
 const TimelineStack = createNativeStackNavigator();
+const SocialStack = createNativeStackNavigator();
 const ProfileStack = createNativeStackNavigator();
 
 // Dashboard Stack Navigator
@@ -95,6 +100,17 @@ const TimelineNavigator = () => (
       options={{ title: "時間軸" }}
     />
   </TimelineStack.Navigator>
+);
+
+// Social Stack Navigator
+const SocialNavigator = () => (
+  <SocialStack.Navigator>
+    <SocialStack.Screen
+      name="Social"
+      component={SocialScreen}
+      options={{ title: "社群動態" }}
+    />
+  </SocialStack.Navigator>
 );
 
 // Profile Stack Navigator
@@ -157,6 +173,17 @@ const MainNavigator: React.FC = () => {
           title: "",
           tabBarIcon: ({ color, size }) => (
             <CalendarDays color={color} size={size * 0.9} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="SocialTab"
+        component={SocialNavigator}
+        options={{
+          // title: "社群",
+          title: "",
+          tabBarIcon: ({ color, size }) => (
+            <Users color={color} size={size * 0.9} />
           ),
         }}
       />

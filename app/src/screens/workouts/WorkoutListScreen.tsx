@@ -3,7 +3,7 @@
  * 運動記錄列表畫面 (Refactored with Tamagui)
  */
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { Alert, RefreshControl } from "react-native";
 import {
   YStack,
@@ -15,7 +15,7 @@ import {
   H4,
   Paragraph,
 } from "tamagui";
-import { useNavigation, NavigationProp } from "@react-navigation/native";
+import { useNavigation, NavigationProp, useFocusEffect } from "@react-navigation/native";
 import {
   Plus,
   ListFilter,
@@ -61,9 +61,12 @@ const WorkoutListScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedType, setSelectedType] = useState<WorkoutType | null>(null);
 
-  useEffect(() => {
-    fetchWorkouts();
-  }, []);
+  // Fetch workouts every time the screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchWorkouts();
+    }, [fetchWorkouts])
+  );
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);

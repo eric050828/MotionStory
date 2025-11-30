@@ -49,9 +49,17 @@ async def create_workout(
     )
 
     return {
-        "workout": WorkoutResponse(**workout.dict(by_alias=True)),
+        "workout": workout_to_response(workout),
         "achievements_triggered": [a.dict() for a in achievements_triggered]
     }
+
+
+def workout_to_response(workout) -> dict:
+    """Convert WorkoutInDB to response dict with 'id' field instead of '_id'"""
+    data = workout.dict(by_alias=True)
+    data["id"] = str(data.pop("_id"))
+    data["user_id"] = str(data.get("user_id", ""))
+    return data
 
 
 @router.get("", response_model=Dict)
@@ -85,13 +93,13 @@ async def list_workouts(
     )
 
     return {
-        "workouts": [WorkoutResponse(**w.dict(by_alias=True)) for w in workouts],
+        "workouts": [workout_to_response(w) for w in workouts],
         "next_cursor": next_cursor,
         "has_next": next_cursor is not None
     }
 
 
-@router.get("/{workout_id}", response_model=WorkoutResponse)
+@router.get("/{workout_id}", response_model=Dict)
 async def get_workout(
     workout_id: str,
     current_user_id: str = Depends(get_current_user_id),
@@ -110,10 +118,10 @@ async def get_workout(
             detail="Workout not found"
         )
 
-    return WorkoutResponse(**workout.dict(by_alias=True))
+    return workout_to_response(workout)
 
 
-@router.put("/{workout_id}", response_model=WorkoutResponse)
+@router.put("/{workout_id}", response_model=Dict)
 async def update_workout(
     workout_id: str,
     workout_data: WorkoutUpdate,
@@ -135,7 +143,7 @@ async def update_workout(
             detail="Workout not found"
         )
 
-    return WorkoutResponse(**workout.dict(by_alias=True))
+    return workout_to_response(workout)
 
 
 @router.delete("/{workout_id}", status_code=status.HTTP_200_OK)
@@ -163,7 +171,7 @@ async def delete_workout(
     return {"message": "Workout deleted successfully", "days_until_permanent_deletion": 30}
 
 
-@router.post("/{workout_id}/restore", response_model=WorkoutResponse)
+@router.post("/{workout_id}/restore", response_model=Dict)
 async def restore_workout(
     workout_id: str,
     current_user_id: str = Depends(get_current_user_id),
@@ -182,7 +190,7 @@ async def restore_workout(
             detail="Workout not found or restoration period expired (30 days)"
         )
 
-    return WorkoutResponse(**workout.dict(by_alias=True))
+    return workout_to_response(workout)
 
 
 @router.get("/trash", response_model=List[Dict])
@@ -202,7 +210,7 @@ async def list_trash(
 
     return [
         {
-            "workout": WorkoutResponse(**item["workout"].dict(by_alias=True)),
+            "workout": workout_to_response(item["workout"]),
             "days_remaining": item["days_remaining"],
             "deleted_at": item["deleted_at"],
             "delete_after": item["delete_after"]
@@ -232,9 +240,7 @@ async def batch_create_workouts(
     return {
         "created_count": len(created_workouts),
         "failed_count": len(failed_workouts),
-        "created_workouts": [
-            WorkoutResponse(**w.dict(by_alias=True)) for w in created_workouts
-        ],
+        "created_workouts": [workout_to_response(w) for w in created_workouts],
         "failed_workouts": failed_workouts
     }
 

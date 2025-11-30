@@ -25,7 +25,7 @@ class MongoDB:
                 serverSelectionTimeoutMS=5000,
             )
             cls.database = cls.client[settings.DB_NAME]
-            print(f"✅ Connected to MongoDB: {settings.DB_NAME}")
+            print(f" Connected to MongoDB: {settings.DB_NAME}")
 
             # Create indexes
             await cls.create_indexes()
@@ -37,7 +37,7 @@ class MongoDB:
             cls.client.close()
             cls.client = None
             cls.database = None
-            print("❌ Disconnected from MongoDB")
+            print(" Disconnected from MongoDB")
 
     @classmethod
     def get_database(cls) -> AsyncIOMotorDatabase:
@@ -239,7 +239,7 @@ class MongoDB:
             name="idx_blocked_user_id"
         )
 
-        print("✅ Database indexes created successfully (Phase 1-3)")
+        print(" Database indexes created successfully (Phase 1-3)")
 
 
 # Convenience function to get database

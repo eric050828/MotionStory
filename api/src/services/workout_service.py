@@ -4,7 +4,7 @@ Workout Service
 """
 
 from datetime import datetime, timedelta, timezone
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Union
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from bson import ObjectId
 import csv
@@ -18,6 +18,17 @@ from ..models import (
     WorkoutStatsResponse,
     WorkoutBatchCreate,
 )
+
+
+def user_id_query(user_id: str) -> Dict:
+    """
+    Creates a query filter that matches user_id stored as either string or ObjectId.
+    This is needed because PyObjectId serializes to string when saving to MongoDB.
+    """
+    try:
+        return {"$in": [user_id, ObjectId(user_id)]}
+    except Exception:
+        return user_id
 
 
 class WorkoutService:
@@ -47,9 +58,10 @@ class WorkoutService:
             **workout_data.dict()
         )
 
-        result = await self.workouts_collection.insert_one(
-            workout.dict(by_alias=True)
-        )
+        # Convert to dict and remove _id to let MongoDB auto-generate it
+        workout_dict = workout.dict(by_alias=True)
+        workout_dict.pop("_id", None)
+        result = await self.workouts_collection.insert_one(workout_dict)
 
         workout.id = result.inserted_id
         return workout
@@ -67,7 +79,7 @@ class WorkoutService:
         """
         workout = await self.workouts_collection.find_one({
             "_id": ObjectId(workout_id),
-            "user_id": ObjectId(user_id),
+            "user_id": user_id_query(user_id),
             "is_deleted": False
         })
 
@@ -100,7 +112,7 @@ class WorkoutService:
             tuple: (運動記錄列表, 下一頁游標)
         """
         query = {
-            "user_id": ObjectId(user_id),
+            "user_id": user_id_query(user_id),
             "is_deleted": False
         }
 
@@ -134,7 +146,14 @@ class WorkoutService:
 
         next_cursor = str(workouts_list[-1]["_id"]) if has_next and workouts_list else None
 
-        workouts = [WorkoutInDB(**w) for w in workouts_list]
+        workouts = []
+        for w in workouts_list:
+            try:
+                workouts.append(WorkoutInDB(**w))
+            except Exception as e:
+                # Skip invalid documents (e.g., empty _id)
+                print(f"Warning: Skipping invalid workout document: {w.get('_id')} - {e}")
+                continue
         return workouts, next_cursor
 
     async def update_workout(
@@ -157,7 +176,7 @@ class WorkoutService:
         result = await self.workouts_collection.find_one_and_update(
             {
                 "_id": ObjectId(workout_id),
-                "user_id": ObjectId(user_id),
+                "user_id": user_id_query(user_id),
                 "is_deleted": False
             },
             {"$set": update_data},
@@ -186,7 +205,7 @@ class WorkoutService:
         result = await self.workouts_collection.update_one(
             {
                 "_id": ObjectId(workout_id),
-                "user_id": ObjectId(user_id),
+                "user_id": user_id_query(user_id),
                 "is_deleted": False
             },
             {
@@ -213,7 +232,7 @@ class WorkoutService:
         """
         workout = await self.workouts_collection.find_one({
             "_id": ObjectId(workout_id),
-            "user_id": ObjectId(user_id),
+            "user_id": user_id_query(user_id),
             "is_deleted": True
         })
 
@@ -257,7 +276,7 @@ class WorkoutService:
         now = datetime.now(timezone.utc)
 
         workouts = await self.workouts_collection.find({
-            "user_id": ObjectId(user_id),
+            "user_id": user_id_query(user_id),
             "is_deleted": True,
             "delete_after": {"$gte": now}
         }).sort("deleted_at", -1).to_list(length=None)
@@ -294,7 +313,7 @@ class WorkoutService:
             WorkoutStatsResponse: 統計摘要
         """
         query = {
-            "user_id": ObjectId(user_id),
+            "user_id": user_id_query(user_id),
             "is_deleted": False
         }
 
@@ -368,7 +387,7 @@ class WorkoutService:
             str: CSV 內容
         """
         workouts = await self.workouts_collection.find({
-            "user_id": ObjectId(user_id),
+            "user_id": user_id_query(user_id),
             "is_deleted": False
         }).sort("start_time", -1).to_list(length=None)
 
