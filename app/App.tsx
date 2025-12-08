@@ -17,6 +17,9 @@ import RootNavigator from "./src/navigation/RootNavigator";
 // 引入設定檔
 import config from "./tamagui.config";
 
+// Custom Theme Provider for app-wide theme context
+import { ThemeProvider } from "./components/theme/ThemeProvider";
+
 export default function App() {
   const systemColorScheme = useColorScheme();
 
@@ -55,15 +58,18 @@ export default function App() {
       <TamaguiProvider config={config} defaultTheme={activeTheme}>
         {/* 4. 關鍵：再包一層 Theme，強制讓內部元件 (如 YStack bg="$background") 接收到主題變更 */}
         <Theme name={activeTheme}>
-          {/* Navigation 的主題設定 (影響 Header 和預設背景) */}
-          <NavigationContainer
-            theme={activeTheme === "dark" ? DarkTheme : DefaultTheme}
-          >
-            {/* StatusBar 文字顏色與背景相反 (背景黑->字白) */}
-            <StatusBar style={activeTheme === "dark" ? "light" : "dark"} />
+          {/* 5. Custom ThemeProvider for components using useTheme hook */}
+          <ThemeProvider>
+            {/* Navigation 的主題設定 (影響 Header 和預設背景) */}
+            <NavigationContainer
+              theme={activeTheme === "dark" ? DarkTheme : DefaultTheme}
+            >
+              {/* StatusBar 文字顏色與背景相反 (背景黑->字白) */}
+              <StatusBar style={activeTheme === "dark" ? "light" : "dark"} />
 
-            <RootNavigator />
-          </NavigationContainer>
+              <RootNavigator />
+            </NavigationContainer>
+          </ThemeProvider>
         </Theme>
       </TamaguiProvider>
     </SafeAreaProvider>

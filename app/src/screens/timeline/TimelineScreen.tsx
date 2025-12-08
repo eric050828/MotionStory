@@ -2,6 +2,7 @@ import React, { useEffect, useCallback } from "react";
 import { FlatList, RefreshControl, useWindowDimensions } from "react-native";
 import { YStack, XStack, Text, View, Circle, Button, Spinner } from "tamagui";
 import { Inbox } from "@tamagui/lucide-icons";
+import { useNavigation } from "@react-navigation/native";
 import { useTimelineStore } from "../../store/timelineStore";
 import TimelineEventCard from "../../components/Card/TimelineEventCard";
 import { TimelineGroup, TimelineEvent } from "../../types/timeline";
@@ -105,9 +106,11 @@ const DateComponent = ({
 const EventsComponent = ({
   events,
   alignRight,
+  onEventPress,
 }: {
   events: TimelineEvent[];
   alignRight: boolean;
+  onEventPress: (event: TimelineEvent) => void;
 }) => (
   <YStack
     flex={1}
@@ -125,7 +128,7 @@ const EventsComponent = ({
       >
         <TimelineEventCard
           event={event}
-          onPress={() => console.log("Pressed event:", event.id)}
+          onPress={() => onEventPress(event)}
         />
       </View>
     ))}
@@ -134,11 +137,40 @@ const EventsComponent = ({
 
 const TimelineScreen = () => {
   const { width } = useWindowDimensions();
+  const navigation = useNavigation<any>();
   const { groups, loading, error, fetchTimeline } = useTimelineStore();
 
   const handleRefresh = useCallback(() => {
     fetchTimeline({});
   }, [fetchTimeline]);
+
+  // 處理事件點擊導航
+  const handleEventPress = useCallback((event: TimelineEvent) => {
+    switch (event.type) {
+      case 'workout':
+        // 導航到運動詳情頁面 (跨 Stack 導航)
+        const workoutId = event.data?.id || event.id;
+        navigation.navigate('WorkoutTab', {
+          screen: 'WorkoutDetail',
+          params: { workoutId },
+        });
+        break;
+      case 'achievement':
+        // 導航到成就頁面 (DashboardStack)
+        navigation.navigate('DashboardTab', {
+          screen: 'Achievements',
+        });
+        break;
+      case 'milestone':
+        // 導航到統計頁面（里程碑通常與統計相關）
+        navigation.navigate('DashboardTab', {
+          screen: 'Stats',
+        });
+        break;
+      default:
+        console.log('Unknown event type:', event.type);
+    }
+  }, [navigation]);
 
   useEffect(() => {
     handleRefresh();
@@ -168,7 +200,7 @@ const TimelineScreen = () => {
               alignRight={false}
               isMobile={isMobile}
             />
-            <EventsComponent events={group.events} alignRight={false} />
+            <EventsComponent events={group.events} alignRight={false} onEventPress={handleEventPress} />
           </YStack>
         </XStack>
       );
@@ -187,12 +219,12 @@ const TimelineScreen = () => {
               isMobile={isMobile}
             />
             <View width={30} /> {/* 中間保留空間給 Dot */}
-            <EventsComponent events={group.events} alignRight={false} />
+            <EventsComponent events={group.events} alignRight={false} onEventPress={handleEventPress} />
           </>
         ) : (
           // 奇數行：事件在左，日期在右
           <>
-            <EventsComponent events={group.events} alignRight={true} />
+            <EventsComponent events={group.events} alignRight={true} onEventPress={handleEventPress} />
             <View width={30} />
             <DateComponent
               date={group.date}

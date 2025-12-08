@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Alert, useWindowDimensions } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -40,6 +40,9 @@ export type RootStackParamList = {
   Profile: undefined;
   DragDropEditor: { widgetId: string };
   WidgetPicker: undefined;
+  Stats: undefined;
+  Leaderboard: undefined;
+  Achievements: undefined;
 };
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -129,6 +132,40 @@ const DashboardStudioScreen: React.FC = () => {
     navigation.navigate("DragDropEditor", { widgetId: widget.id });
   };
 
+  // 導航到對應的詳情頁面
+  const handleWidgetNavigation = (widgetType: string) => {
+    const type = widgetType.toLowerCase();
+
+    // 成就相關 Widget
+    if (type.includes('achievement') || type.includes('badge')) {
+      navigation.navigate('Achievements');
+      return;
+    }
+
+    // 排行榜相關 Widget
+    if (type.includes('leaderboard') || type.includes('ranking') || type.includes('rank')) {
+      navigation.navigate('Leaderboard');
+      return;
+    }
+
+    // 統計相關 Widget (包括圖表、數據等)
+    if (
+      type.includes('stats') ||
+      type.includes('chart') ||
+      type.includes('distance') ||
+      type.includes('workout') ||
+      type.includes('kpi') ||
+      type.includes('gauge') ||
+      type.includes('progress')
+    ) {
+      navigation.navigate('Stats');
+      return;
+    }
+
+    // 其他類型暫時顯示提示
+    Alert.alert('功能開發中', `${widgetType} 的詳情頁面即將推出！`);
+  };
+
   const handleSave = async () => {
     if (!currentDashboard) return;
     try {
@@ -185,10 +222,10 @@ const DashboardStudioScreen: React.FC = () => {
         height={180}
         colors={
           editMode
-            ? ["$green7", "$green8"]
+            ? ["#5bb98b", "#4a9e7a"]
             : theme === "dark"
-            ? ["$blue7", "$blue8"]
-            : ["$blue5", "$blue6"]
+            ? ["#3b82f6", "#2563eb"]
+            : ["#93c5fd", "#60a5fa"]
         }
         opacity={theme === "dark" ? 0.2 : 0.15}
         zIndex={-1}
@@ -277,7 +314,9 @@ const DashboardStudioScreen: React.FC = () => {
                       <Card
                         flex={1}
                         height={calculatedCardHeight}
-                        onPress={() => editMode && handleEditWidget(widget)}
+                        onPress={() => editMode ? handleEditWidget(widget) : handleWidgetNavigation(widget.type)}
+                        cursor="pointer"
+                        pressStyle={{ scale: 0.98, opacity: 0.9 }}
                         borderWidth={editMode ? 3 : 1}
                         borderColor={currentBorderColor}
                         borderStyle={editMode ? "dashed" : "solid"}

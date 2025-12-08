@@ -10,6 +10,9 @@ import { Slot, SplashScreen } from "expo-router";
 // Correctly import the local Tamagui config
 import config from "../tamagui.config";
 
+// Custom Theme Provider for app-wide theme context
+import { ThemeProvider } from "../components/theme/ThemeProvider";
+
 // Keep splash screen visible until resources are loaded
 SplashScreen.preventAutoHideAsync();
 
@@ -37,8 +40,11 @@ export default function RootLayout() {
     <TamaguiProvider config={config} defaultTheme="light">
       {/* Second layer: Paper Provider (for coexistence) */}
       <PaperProvider>
-        {/* Slot renders the active child route */}
-        <Slot />
+        {/* Third layer: Custom Theme Provider */}
+        <ThemeProvider>
+          {/* Slot renders the active child route */}
+          <Slot />
+        </ThemeProvider>
       </PaperProvider>
     </TamaguiProvider>
   );

@@ -1,0 +1,63 @@
+# Docker ignore file
+# Prevents unnecessary files from being copied into Docker images
+
+# Version control
+.git/
+.gitignore
+.gitattributes
+
+# Dependencies
+node_modules/
+app/node_modules/
+
+# Python virtual environments
+api/.venv/
+api/venv/
+api/env/
+**/__pycache__/
+**/*.pyc
+
+# Build artifacts
+api/dist/
+api/build/
+app/dist/
+app/build/
+app/android/
+app/ios/
+
+# Environment files (use build args instead)
+.env*
+api/.env*
+app/.env*
+
+# Logs
+*.log
+logs/
+
+# Testing and coverage
+coverage/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Documentation (unless needed in container)
+*.md
+!README.md
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Expo specific
+app/.expo/
+app/.expo-shared/

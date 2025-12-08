@@ -1,0 +1,181 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Text Component Snapshot should match snapshot for all variants: text-body 1`] = `
+<Text
+  style={
+    [
+      {},
+      {
+        "color": "#0a0a0a",
+        "fontFamily": "System",
+        "fontSize": 16,
+        "fontWeight": "400",
+        "lineHeight": 24,
+      },
+      undefined,
+    ]
+  }
+>
+  body
+</Text>
+`;
+
+exports[`Text Component Snapshot should match snapshot for all variants: text-caption 1`] = `
+<Text
+  style={
+    [
+      {},
+      {
+        "color": "#0a0a0a",
+        "fontFamily": "System",
+        "fontSize": 14,
+        "fontWeight": "400",
+        "lineHeight": 21,
+      },
+      undefined,
+    ]
+  }
+>
+  caption
+</Text>
+`;
+
+exports[`Text Component Snapshot should match snapshot for all variants: text-heading 1`] = `
+<Text
+  style={
+    [
+      {},
+      {
+        "color": "#0a0a0a",
+        "fontFamily": "System",
+        "fontSize": 24,
+        "fontWeight": "400",
+        "lineHeight": 30,
+      },
+      undefined,
+    ]
+  }
+>
+  heading
+</Text>
+`;
+
+exports[`Text Component Snapshot should match snapshot for all variants: text-label 1`] = `
+<Text
+  style={
+    [
+      {},
+      {
+        "color": "#0a0a0a",
+        "fontFamily": "System",
+        "fontSize": 14,
+        "fontWeight": "400",
+        "lineHeight": 21,
+      },
+      undefined,
+    ]
+  }
+>
+  label
+</Text>
+`;
+
+exports[`Text Component Snapshot should match snapshot for all variants: text-subheading 1`] = `
+<Text
+  style={
+    [
+      {},
+      {
+        "color": "#0a0a0a",
+        "fontFamily": "System",
+        "fontSize": 20,
+        "fontWeight": "400",
+        "lineHeight": 25,
+      },
+      undefined,
+    ]
+  }
+>
+  subheading
+</Text>
+`;
+
+exports[`Text Component Snapshot should match snapshot for all weights: text-weight-bold 1`] = `
+<Text
+  style={
+    [
+      {},
+      {
+        "color": "#0a0a0a",
+        "fontFamily": "System",
+        "fontSize": 16,
+        "fontWeight": "700",
+        "lineHeight": 24,
+      },
+      undefined,
+    ]
+  }
+>
+  bold
+</Text>
+`;
+
+exports[`Text Component Snapshot should match snapshot for all weights: text-weight-medium 1`] = `
+<Text
+  style={
+    [
+      {},
+      {
+        "color": "#0a0a0a",
+        "fontFamily": "System",
+        "fontSize": 16,
+        "fontWeight": "500",
+        "lineHeight": 24,
+      },
+      undefined,
+    ]
+  }
+>
+  medium
+</Text>
+`;
+
+exports[`Text Component Snapshot should match snapshot for all weights: text-weight-normal 1`] = `
+<Text
+  style={
+    [
+      {},
+      {
+        "color": "#0a0a0a",
+        "fontFamily": "System",
+        "fontSize": 16,
+        "fontWeight": "400",
+        "lineHeight": 24,
+      },
+      undefined,
+    ]
+  }
+>
+  normal
+</Text>
+`;
+
+exports[`Text Component Snapshot should match snapshot for default text 1`] = `
+<Text
+  style={
+    [
+      {},
+      {
+        "color": "#0a0a0a",
+        "fontFamily": "System",
+        "fontSize": 16,
+        "fontWeight": "400",
+        "lineHeight": 24,
+      },
+      undefined,
+    ]
+  }
+>
+  Default Text
+</Text>
+`;

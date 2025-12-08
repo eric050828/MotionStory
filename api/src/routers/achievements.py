@@ -47,8 +47,14 @@ async def list_achievements(
 
     total = await db.achievements.count_documents(query)
 
+    # Convert ObjectIds to strings for response
+    def convert_achievement(a):
+        a["_id"] = str(a["_id"])
+        a["user_id"] = str(a["user_id"])
+        return a
+
     return {
-        "achievements": [AchievementResponse(**a) for a in achievements],
+        "achievements": [AchievementResponse(**convert_achievement(a)) for a in achievements],
         "total": total,
         "limit": limit,
         "skip": skip

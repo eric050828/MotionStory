@@ -66,7 +66,15 @@ class TimelineService:
             "achieved_at", -1
         ).to_list(length=None)
 
-        return [MilestoneResponse(**m) for m in milestones]
+        # Convert ObjectIds to strings for response
+        def convert_milestone(m):
+            m["_id"] = str(m["_id"])
+            m["user_id"] = str(m["user_id"])
+            if m.get("workout_id"):
+                m["workout_id"] = str(m["workout_id"])
+            return m
+
+        return [MilestoneResponse(**convert_milestone(m)) for m in milestones]
 
     async def create_milestone(
         self,

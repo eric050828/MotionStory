@@ -37,6 +37,8 @@ export interface Activity {
   activity_type: ActivityType;
   reference_id: string;
   content: ActivityContent;
+  image_url: string | null;
+  caption: string | null;
   likes_count: number;
   comments_count: number;
   is_liked_by_me: boolean;

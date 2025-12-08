@@ -20,6 +20,11 @@ import DashboardStudioScreen from "../screens/dashboard/DashboardStudioScreen";
 import WidgetPickerScreen from "../screens/dashboard/WidgetPickerScreen";
 import DragDropEditorScreen from "../screens/dashboard/DragDropEditorScreen";
 
+// Detail Screens
+import StatsScreen from "../screens/stats/StatsScreen";
+import LeaderboardScreen from "../screens/leaderboard/LeaderboardScreen";
+import AchievementsScreen from "../screens/achievements/AchievementsScreen";
+
 // Workout Stack
 import WorkoutListScreen from "../screens/workouts/WorkoutListScreen";
 import WorkoutDetailScreen from "../screens/workouts/WorkoutDetailScreen";
@@ -62,6 +67,21 @@ const DashboardNavigator = () => (
       name="DragDropEditor"
       component={DragDropEditorScreen}
       options={{ title: "佈局編輯" }}
+    />
+    <DashboardStack.Screen
+      name="Stats"
+      component={StatsScreen}
+      options={{ title: "運動統計" }}
+    />
+    <DashboardStack.Screen
+      name="Leaderboard"
+      component={LeaderboardScreen}
+      options={{ title: "排行榜" }}
+    />
+    <DashboardStack.Screen
+      name="Achievements"
+      component={AchievementsScreen}
+      options={{ title: "成就" }}
     />
   </DashboardStack.Navigator>
 );

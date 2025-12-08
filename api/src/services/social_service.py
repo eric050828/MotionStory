@@ -130,6 +130,8 @@ class SocialService:
                 activity_type=activity["activity_type"],
                 reference_id=str(activity["reference_id"]),
                 content=activity.get("content", {}),
+                image_url=activity.get("image_url"),
+                caption=activity.get("caption"),
                 likes_count=like_count,
                 comments_count=comment_count,
                 is_liked_by_me=is_liked,

@@ -43,7 +43,12 @@ async def get_feed(
         limit=limit
     )
 
-    return result
+    # 將 Pydantic 模型轉換為 dict 以確保正確序列化 (包含 image_url, caption)
+    return {
+        "activities": [activity.model_dump(mode='json') for activity in result.get("activities", [])],
+        "next_cursor": result.get("next_cursor"),
+        "has_more": result.get("has_more", False)
+    }
 
 
 # T258: POST /activities/{activity_id}/like

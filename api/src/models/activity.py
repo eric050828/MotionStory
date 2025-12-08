@@ -52,6 +52,8 @@ class ActivityInDB(ActivityBase):
     """資料庫中的 Activity 模型"""
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     content: dict = Field(default_factory=dict, description="動態內容快照（避免關聯查詢）")
+    image_url: Optional[str] = Field(default=None, description="動態配圖 URL")
+    caption: Optional[str] = Field(default=None, description="使用者短文/心得")
     likes_count: int = Field(default=0, description="按讚數量")
     comments_count: int = Field(default=0, description="留言數量")
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -72,6 +74,8 @@ class ActivityResponse(BaseModel):
     activity_type: Literal["workout", "achievement", "challenge"]
     reference_id: str
     content: dict
+    image_url: Optional[str] = None
+    caption: Optional[str] = None
     likes_count: int
     comments_count: int
     is_liked_by_me: bool = False

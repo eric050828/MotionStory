@@ -35,6 +35,7 @@ class Widget(BaseModel):
     """Widget 模型"""
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), description="Widget 唯一識別碼")
     type: Literal[
+        # Original backend types
         "streak_counter",
         "weekly_stats",
         "monthly_distance",
@@ -42,11 +43,27 @@ class Widget(BaseModel):
         "workout_calendar",
         "achievement_showcase",
         "pace_chart",
-        "custom_metric"
+        "custom_metric",
+        # Frontend widget types
+        "progress_ring",
+        "recent_workouts",
+        "workout_heatmap",
+        "stats_comparison",
+        "goal_tracker",
+        "line_chart",
+        "bar_chart",
+        "pie_chart",
+        "distance_leaderboard",
+        "quick_actions"
     ] = Field(..., description="Widget 類型")
+    title: Optional[str] = Field(default=None, description="Widget 標題")
     position: WidgetPosition
     size: WidgetSize
-    config: WidgetConfig = Field(default_factory=WidgetConfig)
+    config: Optional[WidgetConfig] = Field(default_factory=WidgetConfig)
+    visible: bool = Field(default=True, description="是否顯示")
+    
+    class Config:
+        extra = "ignore"  # Ignore extra fields from frontend
 
 
 class DashboardBase(BaseModel):
@@ -116,3 +133,5 @@ class WidgetDataResponse(BaseModel):
     widget_type: str
     data: Dict[str, Any] = Field(..., description="Widget 資料內容")
     last_updated: datetime = Field(default_factory=datetime.utcnow)
+
+# Force reload Sun, Nov 30, 2025  7:42:59 PM
