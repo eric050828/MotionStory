@@ -149,7 +149,9 @@ class SocialService:
         user_id: str,
         activity_type: str,
         reference_id: str,
-        content: Optional[Dict] = None
+        content: Optional[Dict] = None,
+        image_url: Optional[str] = None,
+        caption: Optional[str] = None
     ) -> ActivityResponse:
         """
         建立動態
@@ -159,6 +161,8 @@ class SocialService:
             activity_type: 動態類型 (workout, achievement, challenge)
             reference_id: 關聯物件 ID
             content: 動態內容快照
+            image_url: 動態配圖 URL
+            caption: 使用者短文/心得
 
         Returns:
             ActivityResponse: 動態回應
@@ -171,7 +175,18 @@ class SocialService:
         })
 
         if existing:
-            # 已存在，返回現有動態
+            # 已存在，更新 caption 和 image_url（允許重新分享更新內容）
+            update_data = {"updated_at": datetime.now(timezone.utc)}
+            if caption is not None:
+                update_data["caption"] = caption
+            if image_url is not None:
+                update_data["image_url"] = image_url
+
+            await self.activities.update_one(
+                {"_id": existing["_id"]},
+                {"$set": update_data}
+            )
+
             user = await self.users.find_one({"_id": ObjectId(user_id)})
 
             return ActivityResponse(
@@ -182,6 +197,8 @@ class SocialService:
                 activity_type=activity_type,
                 reference_id=reference_id,
                 content=existing.get("content", {}),
+                image_url=image_url or existing.get("image_url"),
+                caption=caption or existing.get("caption"),
                 likes_count=existing.get("likes_count", 0),
                 comments_count=existing.get("comments_count", 0),
                 is_liked_by_me=False,
@@ -194,6 +211,8 @@ class SocialService:
             activity_type=activity_type,
             reference_id=ObjectId(reference_id),
             content=content or {},
+            image_url=image_url,
+            caption=caption,
             created_at=datetime.now(timezone.utc)
         )
 
@@ -209,6 +228,8 @@ class SocialService:
             activity_type=activity_type,
             reference_id=reference_id,
             content=content or {},
+            image_url=image_url,
+            caption=caption,
             likes_count=0,
             comments_count=0,
             is_liked_by_me=False,
@@ -465,3 +486,179 @@ class SocialService:
                 filtered_content = pattern.sub("***", filtered_content)
 
         return is_filtered, filtered_content
+
+    async def get_my_activities(
+        self,
+        user_id: str,
+        cursor: Optional[str] = None,
+        limit: int = 20
+    ) -> Dict:
+        """
+        取得個人發布的動態列表
+
+        Args:
+            user_id: 使用者 ID
+            cursor: 分頁 cursor
+            limit: 每頁數量
+
+        Returns:
+            Dict: 動態列表與分頁資訊
+        """
+        limit = min(limit, 50)
+
+        # 構建查詢條件
+        query = {"user_id": ObjectId(user_id)}
+
+        # Cursor-based pagination
+        if cursor:
+            try:
+                cursor_time = datetime.fromisoformat(cursor)
+                query["created_at"] = {"$lt": cursor_time}
+            except ValueError:
+                pass
+
+        # 查詢動態 (按時間倒序)
+        activities_cursor = self.activities.find(query).sort("created_at", -1).limit(limit + 1)
+        activities = await activities_cursor.to_list(length=limit + 1)
+
+        # 判斷是否有更多資料
+        has_more = len(activities) > limit
+        if has_more:
+            activities = activities[:limit]
+
+        # 取得下一頁 cursor
+        next_cursor = None
+        if has_more and activities:
+            next_cursor = activities[-1]["created_at"].isoformat()
+
+        # 查詢使用者資料
+        user = await self.users.find_one({"_id": ObjectId(user_id)})
+
+        # 組裝回應資料
+        response_activities = []
+        for activity in activities:
+            # 檢查按讚狀態
+            like_count = await self.likes.count_documents({"activity_id": activity["_id"]})
+            is_liked = await self.likes.count_documents({
+                "activity_id": activity["_id"],
+                "user_id": ObjectId(user_id)
+            }) > 0
+
+            # 留言數量
+            comment_count = await self.comments.count_documents({"activity_id": activity["_id"]})
+
+            response_activities.append(ActivityResponse(
+                activity_id=str(activity["_id"]),
+                user_id=str(activity["user_id"]),
+                user_name=user.get("display_name", "") if user else "",
+                user_avatar=user.get("avatar_url") if user else None,
+                activity_type=activity["activity_type"],
+                reference_id=str(activity["reference_id"]),
+                content=activity.get("content", {}),
+                image_url=activity.get("image_url"),
+                caption=activity.get("caption"),
+                likes_count=like_count,
+                comments_count=comment_count,
+                is_liked_by_me=is_liked,
+                created_at=activity["created_at"]
+            ))
+
+        return {
+            "activities": response_activities,
+            "next_cursor": next_cursor,
+            "has_more": has_more
+        }
+
+    async def update_activity(
+        self,
+        user_id: str,
+        activity_id: str,
+        caption: Optional[str] = None,
+        image_url: Optional[str] = None
+    ) -> ActivityResponse:
+        """
+        更新動態
+
+        Args:
+            user_id: 使用者 ID
+            activity_id: 動態 ID
+            caption: 新的說明文字
+            image_url: 新的圖片 URL
+
+        Returns:
+            ActivityResponse: 更新後的動態
+        """
+        # 查詢動態
+        activity = await self.activities.find_one({"_id": ObjectId(activity_id)})
+        if not activity:
+            raise ValueError("Activity not found")
+
+        # 檢查權限
+        if str(activity["user_id"]) != user_id:
+            raise ValueError("No permission to update this activity")
+
+        # 更新資料
+        update_data = {"updated_at": datetime.now(timezone.utc)}
+        if caption is not None:
+            update_data["caption"] = caption
+        if image_url is not None:
+            update_data["image_url"] = image_url
+
+        await self.activities.update_one(
+            {"_id": ObjectId(activity_id)},
+            {"$set": update_data}
+        )
+
+        # 重新取得動態
+        activity = await self.activities.find_one({"_id": ObjectId(activity_id)})
+        user = await self.users.find_one({"_id": ObjectId(user_id)})
+
+        # 計算按讚和留言數
+        like_count = await self.likes.count_documents({"activity_id": ObjectId(activity_id)})
+        comment_count = await self.comments.count_documents({"activity_id": ObjectId(activity_id)})
+
+        return ActivityResponse(
+            activity_id=str(activity["_id"]),
+            user_id=user_id,
+            user_name=user.get("display_name", "") if user else "",
+            user_avatar=user.get("avatar_url") if user else None,
+            activity_type=activity["activity_type"],
+            reference_id=str(activity["reference_id"]),
+            content=activity.get("content", {}),
+            image_url=activity.get("image_url"),
+            caption=activity.get("caption"),
+            likes_count=like_count,
+            comments_count=comment_count,
+            is_liked_by_me=False,
+            created_at=activity["created_at"]
+        )
+
+    async def delete_activity(
+        self,
+        user_id: str,
+        activity_id: str
+    ):
+        """
+        刪除動態
+
+        Args:
+            user_id: 使用者 ID
+            activity_id: 動態 ID
+        """
+        # 查詢動態
+        activity = await self.activities.find_one({"_id": ObjectId(activity_id)})
+        if not activity:
+            raise ValueError("Activity not found")
+
+        # 檢查權限
+        if str(activity["user_id"]) != user_id:
+            raise ValueError("No permission to delete this activity")
+
+        # 刪除相關的按讚
+        await self.likes.delete_many({"activity_id": ObjectId(activity_id)})
+
+        # 刪除相關的留言
+        await self.comments.delete_many({"activity_id": ObjectId(activity_id)})
+
+        # 刪除動態
+        await self.activities.delete_one({"_id": ObjectId(activity_id)})

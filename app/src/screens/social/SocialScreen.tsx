@@ -6,10 +6,10 @@
  */
 
 import React, { useEffect, useCallback } from 'react'
-import { StyleSheet, FlatList, ActivityIndicator, RefreshControl, Pressable } from 'react-native'
+import { StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native'
 import { useNavigation, NavigationProp } from '@react-navigation/native'
-import { YStack, XStack, H2, Text } from 'tamagui'
-import { Users, Sun, Moon } from '@tamagui/lucide-icons'
+import { YStack, XStack, H2, Text, Button } from 'tamagui'
+import { Users, FileText, Trophy } from '@tamagui/lucide-icons'
 import { useSocialStore } from '../../store/socialStore'
 import { ActivityCard } from '../../../components/social/ActivityCard'
 import { useTheme } from '../../../components/theme/useTheme'
@@ -18,11 +18,13 @@ import type { Activity as ActivityType } from '../../types/social'
 type SocialStackParamList = {
   Social: undefined
   ActivityDetail: { activity: ActivityType }
+  MyActivities: undefined
+  FriendsList: undefined
 }
 
 export default function SocialScreen() {
   const navigation = useNavigation<NavigationProp<SocialStackParamList>>()
-  const { theme, themeMode, toggleTheme } = useTheme()
+  const { theme } = useTheme()
   const {
     activities,
     feedLoading,
@@ -111,22 +113,32 @@ export default function SocialScreen() {
         justifyContent="space-between"
       >
         <H2 color={theme.tokens.colors.foreground}>社群動態</H2>
-        {/* Theme Toggle Button */}
-        <Pressable
-          onPress={toggleTheme}
-          style={[
-            styles.themeButton,
-            { backgroundColor: theme.tokens.colors.muted }
-          ]}
-          accessibilityLabel={themeMode === 'dark' ? '切換為淺色主題' : '切換為深色主題'}
-          accessibilityRole="button"
-        >
-          {themeMode === 'dark' ? (
-            <Sun size={20} color={theme.tokens.colors.foreground} />
-          ) : (
-            <Moon size={20} color={theme.tokens.colors.foreground} />
-          )}
-        </Pressable>
+        <XStack gap="$2">
+          <Button
+            size="$3"
+            circular
+            backgroundColor={theme.tokens.colors.muted}
+            onPress={() => navigation.navigate('MyActivities')}
+          >
+            <FileText size={18} color={theme.tokens.colors.foreground} />
+          </Button>
+          <Button
+            size="$3"
+            circular
+            backgroundColor={theme.tokens.colors.muted}
+            onPress={() => navigation.navigate('FriendsList')}
+          >
+            <Users size={18} color={theme.tokens.colors.foreground} />
+          </Button>
+          <Button
+            size="$3"
+            circular
+            backgroundColor={theme.tokens.colors.muted}
+            onPress={() => navigation.getParent()?.navigate('DashboardTab', { screen: 'Leaderboard' })}
+          >
+            <Trophy size={18} color={theme.tokens.colors.foreground} />
+          </Button>
+        </XStack>
       </XStack>
 
       {/* Error State */}
@@ -175,12 +187,5 @@ const styles = StyleSheet.create({
   listContent: {
     padding: 16,
     flexGrow: 1,
-  },
-  themeButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 })

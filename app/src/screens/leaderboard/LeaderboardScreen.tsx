@@ -1,9 +1,9 @@
 /**
  * Leaderboard Screen
- * 排行榜頁面 - 與好友比較運動量
+ * 排行榜頁面 - 與好友比較運動量（使用真實 API）
  */
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { ScrollView, RefreshControl } from 'react-native';
 import { YStack, XStack, Text, Spinner, Card, Avatar, Circle } from 'tamagui';
 import { LinearGradient } from 'tamagui/linear-gradient';
@@ -12,20 +12,29 @@ import {
   ChevronLeft, Trophy, Medal, Crown, Users,
   Route, Timer, Flame, TrendingUp
 } from '@tamagui/lucide-icons';
-import useWorkoutStore from '../../store/workoutStore';
+import { api } from '../../services/api';
 
-// Mock leaderboard data (in real app, this would come from API)
-const mockLeaderboardData = [
-  { id: '1', name: '小明', avatar: null, distance: 156.8, workouts: 28, streak: 15 },
-  { id: '2', name: '小華', avatar: null, distance: 142.3, workouts: 25, streak: 12 },
-  { id: '3', name: '小美', avatar: null, distance: 128.5, workouts: 22, streak: 8 },
-  { id: '4', name: '阿強', avatar: null, distance: 115.2, workouts: 20, streak: 6 },
-  { id: '5', name: '小芳', avatar: null, distance: 98.7, workouts: 18, streak: 5 },
-  { id: '6', name: '阿偉', avatar: null, distance: 87.4, workouts: 16, streak: 4 },
-  { id: '7', name: '小琪', avatar: null, distance: 76.2, workouts: 14, streak: 3 },
-];
+// Types from API
+interface LeaderboardEntry {
+  rank: number;
+  user_id: string;
+  display_name: string;
+  avatar_url: string | null;
+  metric_value: number;
+  workout_count: number;
+}
 
-type LeaderboardType = 'distance' | 'workouts' | 'streak';
+interface LeaderboardResponse {
+  period: 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+  metric: 'distance' | 'duration' | 'workouts' | 'calories';
+  period_start: string;
+  period_end: string;
+  entries: LeaderboardEntry[];
+  my_rank: number | null;
+  total_participants: number;
+}
+
+type LeaderboardMetric = 'distance' | 'workouts' | 'duration';
 
 // Tab Button
 const TabButton: React.FC<{
@@ -61,7 +70,8 @@ const LeaderboardItem: React.FC<{
   value: number;
   unit: string;
   isCurrentUser?: boolean;
-}> = ({ rank, name, avatar, value, unit, isCurrentUser }) => {
+  workoutCount?: number;
+}> = ({ rank, name, avatar, value, unit, isCurrentUser, workoutCount }) => {
   const getRankIcon = () => {
     switch (rank) {
       case 1:
@@ -155,95 +165,59 @@ const LeaderboardItem: React.FC<{
 
 const LeaderboardScreen: React.FC = () => {
   const navigation = useNavigation();
-  const { workouts, loading, fetchWorkouts } = useWorkoutStore();
-  const [activeTab, setActiveTab] = useState<LeaderboardType>('distance');
+  const [activeTab, setActiveTab] = useState<LeaderboardMetric>('distance');
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [leaderboardData, setLeaderboardData] = useState<LeaderboardResponse | null>(null);
+
+  // Fetch leaderboard from API
+  const fetchLeaderboard = useCallback(async (metric: LeaderboardMetric = activeTab) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await api.getLeaderboard({
+        period: 'weekly',
+        metric: metric === 'duration' ? 'duration' : metric,
+      });
+      setLeaderboardData(response);
+    } catch (err: any) {
+      console.error('Failed to fetch leaderboard:', err);
+      setError(err.message || '無法載入排行榜');
+    } finally {
+      setLoading(false);
+    }
+  }, [activeTab]);
 
   useEffect(() => {
-    fetchWorkouts();
+    fetchLeaderboard();
   }, []);
 
-  // Calculate current user stats
-  const currentUserStats = useMemo(() => {
-    const validWorkouts = workouts.filter(w => !w.is_deleted);
-    const totalDistance = validWorkouts.reduce((sum, w) => sum + (w.distance_km || 0), 0);
-
-    // Calculate streak
-    let streak = 0;
-    const sortedWorkouts = [...validWorkouts].sort(
-      (a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
-    );
-    let currentDate = new Date();
-    currentDate.setHours(0, 0, 0, 0);
-
-    for (const workout of sortedWorkouts) {
-      const workoutDate = new Date(workout.start_time);
-      workoutDate.setHours(0, 0, 0, 0);
-      const diffDays = Math.floor((currentDate.getTime() - workoutDate.getTime()) / (1000 * 60 * 60 * 24));
-      if (diffDays <= 1) {
-        streak++;
-        currentDate = workoutDate;
-      } else {
-        break;
-      }
-    }
-
-    return {
-      id: 'me',
-      name: '我',
-      avatar: null,
-      distance: totalDistance,
-      workouts: validWorkouts.length,
-      streak
-    };
-  }, [workouts]);
-
-  // Combine and sort leaderboard
-  const leaderboard = useMemo(() => {
-    const allUsers = [...mockLeaderboardData, currentUserStats];
-
-    let sortKey: keyof typeof currentUserStats;
-    switch (activeTab) {
-      case 'distance':
-        sortKey = 'distance';
-        break;
-      case 'workouts':
-        sortKey = 'workouts';
-        break;
-      case 'streak':
-        sortKey = 'streak';
-        break;
-      default:
-        sortKey = 'distance';
-    }
-
-    return allUsers.sort((a, b) => (b[sortKey] as number) - (a[sortKey] as number));
-  }, [activeTab, currentUserStats]);
+  // Handle tab change
+  const handleTabChange = useCallback((metric: LeaderboardMetric) => {
+    setActiveTab(metric);
+    fetchLeaderboard(metric);
+  }, [fetchLeaderboard]);
 
   // Get unit for current tab
   const getUnit = () => {
     switch (activeTab) {
       case 'distance': return '公里';
       case 'workouts': return '次';
-      case 'streak': return '天';
+      case 'duration': return '分鐘';
     }
   };
 
-  // Get value for current tab
-  const getValue = (user: typeof currentUserStats) => {
-    switch (activeTab) {
-      case 'distance': return user.distance;
-      case 'workouts': return user.workouts;
-      case 'streak': return user.streak;
-    }
-  };
-
-  // Find current user rank
-  const currentUserRank = leaderboard.findIndex(u => u.id === 'me') + 1;
+  // Get current user stats
+  const myRank = leaderboardData?.my_rank || 0;
+  const totalParticipants = leaderboardData?.total_participants || 0;
+  const myEntry = leaderboardData?.entries.find(e => e.rank === myRank);
+  const myMetricValue = myEntry?.metric_value || 0;
+  const myWorkoutCount = myEntry?.workout_count || 0;
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await fetchWorkouts();
+    await fetchLeaderboard();
     setRefreshing(false);
   };
 
@@ -269,10 +243,10 @@ const LeaderboardScreen: React.FC = () => {
                 <Text fontSize="$3" color="white" opacity={0.8}>你的排名</Text>
                 <XStack ai="baseline" gap="$1">
                   <Text fontSize="$10" fontWeight="900" color="white">
-                    #{currentUserRank}
+                    {myRank > 0 ? `#${myRank}` : '-'}
                   </Text>
                   <Text fontSize="$4" color="white" opacity={0.8}>
-                    / {leaderboard.length}
+                    / {totalParticipants}
                   </Text>
                 </XStack>
               </YStack>
@@ -280,13 +254,13 @@ const LeaderboardScreen: React.FC = () => {
                 <XStack ai="center" gap="$2">
                   <Route size={18} color="white" />
                   <Text fontSize="$5" fontWeight="700" color="white">
-                    {currentUserStats.distance.toFixed(1)} km
+                    {myMetricValue.toFixed(1)} {getUnit()}
                   </Text>
                 </XStack>
                 <XStack ai="center" gap="$2">
-                  <Flame size={18} color="white" />
+                  <TrendingUp size={18} color="white" />
                   <Text fontSize="$4" color="white" opacity={0.9}>
-                    {currentUserStats.streak} 天連續
+                    {myWorkoutCount} 次運動
                   </Text>
                 </XStack>
               </YStack>
@@ -299,49 +273,62 @@ const LeaderboardScreen: React.FC = () => {
               label="距離"
               icon={Route}
               active={activeTab === 'distance'}
-              onPress={() => setActiveTab('distance')}
+              onPress={() => handleTabChange('distance')}
             />
             <TabButton
               label="運動次數"
               icon={TrendingUp}
               active={activeTab === 'workouts'}
-              onPress={() => setActiveTab('workouts')}
+              onPress={() => handleTabChange('workouts')}
             />
             <TabButton
-              label="連續天數"
-              icon={Flame}
-              active={activeTab === 'streak'}
-              onPress={() => setActiveTab('streak')}
+              label="運動時長"
+              icon={Timer}
+              active={activeTab === 'duration'}
+              onPress={() => handleTabChange('duration')}
             />
           </XStack>
+
+          {/* Error State */}
+          {error && (
+            <Card bg="$red2" p="$3" br="$3">
+              <Text color="$red10" ta="center">{error}</Text>
+            </Card>
+          )}
 
           {/* Leaderboard List */}
           <YStack gap="$1">
             <XStack ai="center" gap="$2" mb="$2">
               <Users size={20} color="$color" />
-              <Text fontSize="$5" fontWeight="700" color="$color">排行榜</Text>
+              <Text fontSize="$5" fontWeight="700" color="$color">好友排行榜</Text>
             </XStack>
 
-            {leaderboard.map((user, index) => (
-              <LeaderboardItem
-                key={user.id}
-                rank={index + 1}
-                name={user.name}
-                avatar={user.avatar}
-                value={getValue(user)}
-                unit={getUnit()}
-                isCurrentUser={user.id === 'me'}
-              />
-            ))}
+            {loading && !leaderboardData ? (
+              <YStack ai="center" jc="center" py="$8">
+                <Spinner size="large" color="$blue10" />
+                <Text mt="$3" color="$gray10">載入排行榜中...</Text>
+              </YStack>
+            ) : leaderboardData?.entries.length === 0 ? (
+              <YStack ai="center" jc="center" py="$8">
+                <Users size={48} color="$gray8" />
+                <Text mt="$3" color="$gray10">還沒有好友</Text>
+                <Text fontSize="$2" color="$gray8">邀請好友一起運動吧！</Text>
+              </YStack>
+            ) : (
+              leaderboardData?.entries.map((entry) => (
+                <LeaderboardItem
+                  key={entry.user_id}
+                  rank={entry.rank}
+                  name={entry.display_name}
+                  avatar={entry.avatar_url}
+                  value={entry.metric_value}
+                  unit={getUnit()}
+                  isCurrentUser={entry.rank === myRank}
+                  workoutCount={entry.workout_count}
+                />
+              ))
+            )}
           </YStack>
-
-          {/* Loading state */}
-          {loading && workouts.length === 0 && (
-            <YStack ai="center" jc="center" py="$8">
-              <Spinner size="large" color="$blue10" />
-              <Text mt="$3" color="$gray10">載入排行榜中...</Text>
-            </YStack>
-          )}
         </YStack>
       </ScrollView>
     </YStack>

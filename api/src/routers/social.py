@@ -10,6 +10,7 @@ from typing import Optional
 from ..core.database import get_database
 from ..core.security import get_current_user_id
 from ..models import (
+    ActivityCreate,
     ActivityResponse,
     LikeResponse,
     CommentCreate,
@@ -18,6 +19,34 @@ from ..models import (
 from ..services import SocialService
 
 router = APIRouter(prefix="/social", tags=["Social"])
+
+
+# POST /social/activities - 發布動態
+@router.post("/activities", response_model=ActivityResponse, status_code=status.HTTP_201_CREATED)
+async def create_activity(
+    request: ActivityCreate,
+    current_user_id: str = Depends(get_current_user_id),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """
+    發布社群動態
+
+    將運動記錄、成就解鎖或挑戰完成分享到社群
+    """
+    service = SocialService(db)
+
+    try:
+        activity = await service.create_activity(
+            user_id=current_user_id,
+            activity_type=request.activity_type,
+            reference_id=request.reference_id,
+            content=request.content,
+            image_url=request.image_url,
+            caption=request.caption
+        )
+        return activity
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 # T257: GET /social/feed
@@ -44,6 +73,34 @@ async def get_feed(
     )
 
     # 將 Pydantic 模型轉換為 dict 以確保正確序列化 (包含 image_url, caption)
+    return {
+        "activities": [activity.model_dump(mode='json') for activity in result.get("activities", [])],
+        "next_cursor": result.get("next_cursor"),
+        "has_more": result.get("has_more", False)
+    }
+
+
+# GET /social/my-activities - 取得個人動態列表 (必須在 /activities/{activity_id} 之前定義)
+@router.get("/my-activities")
+async def get_my_activities(
+    cursor: Optional[str] = None,
+    limit: int = Query(20, ge=1, le=50),
+    current_user_id: str = Depends(get_current_user_id),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """
+    取得個人發布的動態列表
+
+    支援 Cursor-based Pagination
+    """
+    service = SocialService(db)
+
+    result = await service.get_my_activities(
+        user_id=current_user_id,
+        cursor=cursor,
+        limit=limit
+    )
+
     return {
         "activities": [activity.model_dump(mode='json') for activity in result.get("activities", [])],
         "next_cursor": result.get("next_cursor"),
@@ -156,3 +213,59 @@ async def get_comments(
         "comments": comments,
         "total_count": total_count
     }
+
+
+# PUT /social/activities/{activity_id} - 更新動態
+@router.put("/activities/{activity_id}", response_model=ActivityResponse)
+async def update_activity(
+    activity_id: str,
+    caption: Optional[str] = None,
+    image_url: Optional[str] = None,
+    current_user_id: str = Depends(get_current_user_id),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """
+    更新動態的 caption 或 image_url
+
+    只能更新自己發布的動態
+    """
+    service = SocialService(db)
+
+    try:
+        activity = await service.update_activity(
+            user_id=current_user_id,
+            activity_id=activity_id,
+            caption=caption,
+            image_url=image_url
+        )
+        return activity
+    except ValueError as e:
+        if "not found" in str(e).lower() or "permission" in str(e).lower():
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+# DELETE /social/activities/{activity_id} - 刪除動態
+@router.delete("/activities/{activity_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_activity(
+    activity_id: str,
+    current_user_id: str = Depends(get_current_user_id),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """
+    刪除動態
+
+    只能刪除自己發布的動態
+    會同時刪除相關的按讚和留言
+    """
+    service = SocialService(db)
+
+    try:
+        await service.delete_activity(
+            user_id=current_user_id,
+            activity_id=activity_id
+        )
+    except ValueError as e:
+        if "not found" in str(e).lower() or "permission" in str(e).lower():
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

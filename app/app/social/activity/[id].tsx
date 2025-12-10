@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useMemo } from 'react'
-import { View, ScrollView, Pressable, StyleSheet } from 'react-native'
+import { View, ScrollView, Pressable, StyleSheet, Image, Dimensions } from 'react-native'
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router'
 import { useTheme } from '../../../components/theme/useTheme'
 import { Text } from '../../../components/ui/Text'
@@ -16,6 +16,9 @@ import { CommentSection } from '../../../components/social/CommentSection'
 import { useSocialStore } from '../../../src/store/socialStore'
 import { socialService } from '../../../src/services/socialService'
 import type { WorkoutContent, AchievementContent, ChallengeContent } from '../../../src/types/social'
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window')
+const IMAGE_HEIGHT = 280
 
 export default function ActivityDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
@@ -223,6 +226,17 @@ export default function ActivityDetailScreen() {
             </View>
           </View>
 
+          {/* Image */}
+          {activity.image_url && (
+            <View style={styles.imageContainer}>
+              <Image
+                source={{ uri: activity.image_url }}
+                style={styles.image}
+                resizeMode="cover"
+              />
+            </View>
+          )}
+
           {/* Content */}
           <View style={styles.content}>{renderActivityContent()}</View>
 
@@ -286,6 +300,18 @@ const styles = StyleSheet.create({
   },
   card: {
     marginBottom: 16,
+    overflow: 'hidden',
+  },
+  imageContainer: {
+    width: '100%',
+    height: IMAGE_HEIGHT,
+    marginTop: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  image: {
+    width: '100%',
+    height: '100%',
   },
   header: {
     flexDirection: 'row',

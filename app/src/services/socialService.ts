@@ -11,6 +11,7 @@ import type {
   FeedParams,
   CommentsResponse,
   CreateCommentRequest,
+  CreateActivityRequest,
 } from '../types/social';
 
 class SocialService {
@@ -47,6 +48,66 @@ class SocialService {
    */
   async createComment(activityId: string, data: CreateCommentRequest): Promise<Comment> {
     return api.createComment(activityId, data);
+  }
+
+  /**
+   * 發布動態（分享運動/成就/挑戰到社群）
+   */
+  async createActivity(data: CreateActivityRequest): Promise<Activity> {
+    return api.createActivity(data);
+  }
+
+  /**
+   * 分享運動記錄到社群
+   */
+  async shareWorkout(
+    workoutId: string,
+    workoutData: {
+      workout_type: string;
+      duration_minutes: number;
+      distance_km?: number;
+      calories?: number;
+    },
+    caption?: string,
+    imageUrl?: string
+  ): Promise<Activity> {
+    return this.createActivity({
+      activity_type: 'workout',
+      reference_id: workoutId,
+      content: workoutData,
+      caption,
+      image_url: imageUrl,
+    });
+  }
+
+  /**
+   * 分享成就到社群
+   */
+  async shareAchievement(achievementId: string, achievementData: {
+    achievement_type: string;
+    title: string;
+    description?: string;
+  }): Promise<Activity> {
+    return this.createActivity({
+      activity_type: 'achievement',
+      reference_id: achievementId,
+      content: achievementData
+    });
+  }
+
+  /**
+   * 分享挑戰完成到社群
+   */
+  async shareChallenge(challengeId: string, challengeData: {
+    challenge_name: string;
+    progress: number;
+    goal: number;
+  }): Promise<Activity> {
+    return this.createActivity({
+      activity_type: 'challenge',
+      reference_id: challengeId,
+      content: challengeData
+    });
   }
 
   /**

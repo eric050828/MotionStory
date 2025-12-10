@@ -4,9 +4,13 @@
  */
 
 import React, { useEffect, useState, useCallback } from 'react'
-import { View, StyleSheet, FlatList, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native'
+import { View, StyleSheet, FlatList, ActivityIndicator, KeyboardAvoidingView, Platform, Image, Dimensions } from 'react-native'
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native'
-import { YStack, XStack, H3, Text, Card, Button, Input, useTheme } from 'tamagui'
+import { YStack, XStack, H3, Text, Card, Button, Input } from 'tamagui'
+import { useTheme } from '../../../components/theme/useTheme'
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window')
+const IMAGE_HEIGHT = 280
 import {
   Activity,
   Trophy,
@@ -29,7 +33,7 @@ type ActivityDetailRouteParams = {
 }
 
 export default function ActivityDetailScreen() {
-  const theme = useTheme()
+  const { theme } = useTheme()
   const navigation = useNavigation()
   const route = useRoute<RouteProp<ActivityDetailRouteParams, 'ActivityDetail'>>()
   const { activity } = route.params
@@ -104,18 +108,18 @@ export default function ActivityDetailScreen() {
 
   // Render comment item
   const renderComment = ({ item }: { item: Comment }) => (
-    <XStack gap="$3" paddingVertical="$3" borderBottomWidth={1} borderBottomColor="$borderColor">
-      <View style={[styles.commentAvatar, { backgroundColor: theme.gray5?.val }]}>
-        <User size={16} color={theme.gray10?.val} />
+    <XStack gap="$3" paddingVertical="$3" borderBottomWidth={1} borderBottomColor={theme.tokens.colors.border}>
+      <View style={[styles.commentAvatar, { backgroundColor: theme.tokens.colors.muted }]}>
+        <User size={16} color={theme.tokens.colors.mutedForeground} />
       </View>
       <YStack flex={1} gap="$1">
         <XStack alignItems="center" gap="$2">
-          <Text fontWeight="bold" fontSize="$3">{item.user_name}</Text>
-          <Text fontSize="$2" color="$gray10">
+          <Text fontWeight="bold" fontSize="$3" color={theme.tokens.colors.foreground}>{item.user_name}</Text>
+          <Text fontSize="$2" color={theme.tokens.colors.mutedForeground}>
             {new Date(item.created_at).toLocaleDateString('zh-TW')}
           </Text>
         </XStack>
-        <Text fontSize="$3">{item.content}</Text>
+        <Text fontSize="$3" color={theme.tokens.colors.foreground}>{item.content}</Text>
       </YStack>
     </XStack>
   )
@@ -125,54 +129,65 @@ export default function ActivityDetailScreen() {
     <YStack gap="$4" paddingBottom="$4">
       {/* User Info */}
       <XStack alignItems="center" gap="$3">
-        <View style={[styles.avatar, { backgroundColor: theme.gray5?.val }]}>
-          <User size={28} color={theme.gray10?.val} />
+        <View style={[styles.avatar, { backgroundColor: theme.tokens.colors.muted }]}>
+          <User size={28} color={theme.tokens.colors.mutedForeground} />
         </View>
         <YStack flex={1}>
-          <Text fontWeight="bold" fontSize="$5">{localActivity.user_name}</Text>
+          <Text fontWeight="bold" fontSize="$5" color={theme.tokens.colors.foreground}>{localActivity.user_name}</Text>
           <XStack alignItems="center" gap="$2">
             {getActivityIcon(localActivity.activity_type)}
-            <Text fontSize="$3" color="$gray10">{getActivityTypeLabel(localActivity.activity_type)}</Text>
+            <Text fontSize="$3" color={theme.tokens.colors.mutedForeground}>{getActivityTypeLabel(localActivity.activity_type)}</Text>
           </XStack>
         </YStack>
         <XStack alignItems="center" gap="$1">
-          <Clock size={14} color="$gray10" />
-          <Text fontSize="$2" color="$gray10">
+          <Clock size={14} color={theme.tokens.colors.mutedForeground} />
+          <Text fontSize="$2" color={theme.tokens.colors.mutedForeground}>
             {new Date(localActivity.created_at).toLocaleDateString('zh-TW')}
           </Text>
         </XStack>
       </XStack>
 
+      {/* Image */}
+      {localActivity.image_url && (
+        <View style={[styles.imageContainer, { backgroundColor: theme.tokens.colors.muted }]}>
+          <Image
+            source={{ uri: localActivity.image_url }}
+            style={styles.image}
+            resizeMode="cover"
+          />
+        </View>
+      )}
+
       {/* Activity Content */}
-      <Card backgroundColor="$backgroundHover" padding="$4" borderRadius="$4">
+      <Card backgroundColor={theme.tokens.colors.card} padding="$4" borderRadius="$4">
         {localActivity.activity_type === 'workout' && localActivity.content && (
           <YStack gap="$3">
-            <Text fontWeight="700" fontSize="$5">
+            <Text fontWeight="700" fontSize="$5" color={theme.tokens.colors.foreground}>
               {(localActivity.content as any).workout_type || '運動'}
             </Text>
             <XStack gap="$6" flexWrap="wrap">
               {(localActivity.content as any).duration_minutes && (
                 <YStack alignItems="center">
-                  <Text fontSize="$7" fontWeight="bold" color="$blue10">
+                  <Text fontSize="$7" fontWeight="bold" color={theme.tokens.colors.primary}>
                     {(localActivity.content as any).duration_minutes}
                   </Text>
-                  <Text fontSize="$3" color="$gray10">分鐘</Text>
+                  <Text fontSize="$3" color={theme.tokens.colors.mutedForeground}>分鐘</Text>
                 </YStack>
               )}
               {(localActivity.content as any).calories && (
                 <YStack alignItems="center">
-                  <Text fontSize="$7" fontWeight="bold" color="$orange10">
+                  <Text fontSize="$7" fontWeight="bold" color={theme.tokens.colors.warning}>
                     {(localActivity.content as any).calories}
                   </Text>
-                  <Text fontSize="$3" color="$gray10">大卡</Text>
+                  <Text fontSize="$3" color={theme.tokens.colors.mutedForeground}>大卡</Text>
                 </YStack>
               )}
               {(localActivity.content as any).distance_km && (
                 <YStack alignItems="center">
-                  <Text fontSize="$7" fontWeight="bold" color="$green10">
+                  <Text fontSize="$7" fontWeight="bold" color={theme.tokens.colors.success}>
                     {(localActivity.content as any).distance_km}
                   </Text>
-                  <Text fontSize="$3" color="$gray10">公里</Text>
+                  <Text fontSize="$3" color={theme.tokens.colors.mutedForeground}>公里</Text>
                 </YStack>
               )}
             </XStack>
@@ -181,12 +196,12 @@ export default function ActivityDetailScreen() {
 
         {localActivity.activity_type === 'achievement' && localActivity.content && (
           <YStack alignItems="center" gap="$3">
-            <Trophy size={64} color="$yellow10" />
-            <Text fontWeight="bold" fontSize="$6">
+            <Trophy size={64} color={theme.tokens.colors.warning} />
+            <Text fontWeight="bold" fontSize="$6" color={theme.tokens.colors.foreground}>
               {(localActivity.content as any).title || '新成就'}
             </Text>
             {(localActivity.content as any).description && (
-              <Text color="$gray10" textAlign="center" fontSize="$4">
+              <Text color={theme.tokens.colors.mutedForeground} textAlign="center" fontSize="$4">
                 {(localActivity.content as any).description}
               </Text>
             )}
@@ -196,13 +211,13 @@ export default function ActivityDetailScreen() {
         {localActivity.activity_type === 'challenge' && localActivity.content && (
           <YStack gap="$3">
             <XStack alignItems="center" gap="$2">
-              <Target size={24} color="$green10" />
-              <Text fontWeight="bold" fontSize="$5">
+              <Target size={24} color={theme.tokens.colors.success} />
+              <Text fontWeight="bold" fontSize="$5" color={theme.tokens.colors.foreground}>
                 {(localActivity.content as any).title || '挑戰'}
               </Text>
             </XStack>
             {(localActivity.content as any).description && (
-              <Text color="$gray10" fontSize="$4">
+              <Text color={theme.tokens.colors.mutedForeground} fontSize="$4">
                 {(localActivity.content as any).description}
               </Text>
             )}
@@ -220,28 +235,28 @@ export default function ActivityDetailScreen() {
         >
           <Heart
             size={24}
-            color={localActivity.is_liked_by_me ? '$red10' : '$gray10'}
-            fill={localActivity.is_liked_by_me ? theme.red10?.val : 'transparent'}
+            color={localActivity.is_liked_by_me ? theme.tokens.colors.error : theme.tokens.colors.mutedForeground}
+            fill={localActivity.is_liked_by_me ? theme.tokens.colors.error : 'transparent'}
           />
           <Text
             fontSize="$4"
             fontWeight="600"
-            color={localActivity.is_liked_by_me ? '$red10' : '$gray10'}
+            color={localActivity.is_liked_by_me ? theme.tokens.colors.error : theme.tokens.colors.mutedForeground}
           >
             {localActivity.likes_count > 0 ? `${localActivity.likes_count} 個讚` : '讚'}
           </Text>
         </XStack>
         <XStack alignItems="center" gap="$2">
-          <MessageCircle size={24} color="$gray10" />
-          <Text fontSize="$4" color="$gray10">
+          <MessageCircle size={24} color={theme.tokens.colors.mutedForeground} />
+          <Text fontSize="$4" color={theme.tokens.colors.mutedForeground}>
             {activityComments.length > 0 ? `${activityComments.length} 則留言` : '留言'}
           </Text>
         </XStack>
       </XStack>
 
       {/* Comments Header */}
-      <YStack paddingTop="$4" borderTopWidth={1} borderTopColor="$borderColor">
-        <Text fontWeight="bold" fontSize="$4">留言</Text>
+      <YStack paddingTop="$4" borderTopWidth={1} borderTopColor={theme.tokens.colors.border}>
+        <Text fontWeight="bold" fontSize="$4" color={theme.tokens.colors.foreground}>留言</Text>
       </YStack>
     </YStack>
   )
@@ -251,28 +266,28 @@ export default function ActivityDetailScreen() {
     if (isCommentsLoading) return null
     return (
       <YStack alignItems="center" padding="$6">
-        <MessageCircle size={32} color="$gray8" />
-        <Text color="$gray10" marginTop="$2">還沒有留言</Text>
-        <Text color="$gray10" fontSize="$2">成為第一個留言的人吧！</Text>
+        <MessageCircle size={32} color={theme.tokens.colors.muted} />
+        <Text color={theme.tokens.colors.mutedForeground} marginTop="$2">還沒有留言</Text>
+        <Text color={theme.tokens.colors.mutedForeground} fontSize="$2">成為第一個留言的人吧！</Text>
       </YStack>
     )
   }
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
+      style={{ flex: 1, backgroundColor: theme.tokens.colors.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={100}
     >
-      <YStack flex={1} backgroundColor="$background">
+      <YStack flex={1} backgroundColor={theme.tokens.colors.background}>
         {/* Header */}
         <XStack
           paddingTop={60}
           paddingBottom="$3"
           paddingHorizontal="$4"
-          backgroundColor="$background"
+          backgroundColor={theme.tokens.colors.background}
           borderBottomWidth={1}
-          borderBottomColor="$borderColor"
+          borderBottomColor={theme.tokens.colors.border}
           alignItems="center"
           gap="$3"
         >
@@ -282,9 +297,9 @@ export default function ActivityDetailScreen() {
             chromeless
             onPress={() => navigation.goBack()}
           >
-            <ArrowLeft size={24} color="$color" />
+            <ArrowLeft size={24} color={theme.tokens.colors.foreground} />
           </Button>
-          <H3 flex={1}>動態詳情</H3>
+          <H3 flex={1} color={theme.tokens.colors.foreground}>動態詳情</H3>
         </XStack>
 
         {/* Content */}
@@ -309,9 +324,9 @@ export default function ActivityDetailScreen() {
         <XStack
           padding="$4"
           paddingBottom="$6"
-          backgroundColor="$background"
+          backgroundColor={theme.tokens.colors.background}
           borderTopWidth={1}
-          borderTopColor="$borderColor"
+          borderTopColor={theme.tokens.colors.border}
           gap="$3"
           alignItems="center"
         >
@@ -325,14 +340,14 @@ export default function ActivityDetailScreen() {
           <Button
             size="$4"
             circular
-            backgroundColor={newComment.trim() ? '$blue9' : '$gray5'}
+            backgroundColor={newComment.trim() ? theme.tokens.colors.primary : theme.tokens.colors.muted}
             onPress={handleSubmitComment}
             disabled={!newComment.trim() || submitting}
           >
             {submitting ? (
               <ActivityIndicator size="small" color="white" />
             ) : (
-              <Send size={20} color={newComment.trim() ? 'white' : '$gray10'} />
+              <Send size={20} color={newComment.trim() ? 'white' : theme.tokens.colors.mutedForeground} />
             )}
           </Button>
         </XStack>
@@ -359,5 +374,16 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  imageContainer: {
+    width: '100%',
+    height: IMAGE_HEIGHT,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  image: {
+    width: '100%',
+    height: '100%',
   },
 })

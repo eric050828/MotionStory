@@ -106,3 +106,30 @@ class UserSearchResult(BaseModel):
 
     class Config:
         json_encoders = {ObjectId: str}
+
+
+class LeaderboardEntry(BaseModel):
+    """排行榜條目"""
+    rank: int
+    user_id: str
+    display_name: str
+    avatar_url: Optional[str] = None
+    total_distance_km: float = 0
+    total_workouts: int = 0
+    current_streak: int = 0
+    is_current_user: bool = False
+
+    class Config:
+        json_encoders = {ObjectId: str}
+
+
+class LeaderboardResponse(BaseModel):
+    """排行榜回應"""
+    leaderboard: list  # List[LeaderboardEntry]
+    current_user_rank: int
+    current_user_stats: dict
+    total_friends: int
+    period: str  # 'weekly', 'monthly', 'all_time'
+
+    class Config:
+        json_encoders = {ObjectId: str}

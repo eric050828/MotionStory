@@ -40,6 +40,9 @@ import SettingsScreen from "../screens/profile/SettingsScreen";
 // Social Stack
 import SocialScreen from "../screens/social/SocialScreen";
 import ActivityDetailScreen from "../screens/social/ActivityDetailScreen";
+import MyActivitiesScreen from "../screens/social/MyActivitiesScreen";
+import FriendsListScreen from "../screens/social/FriendsListScreen";
+import FriendsSearchScreen from "../screens/social/FriendsSearchScreen";
 
 import { WorkoutStackParamList } from "../types/navigation";
 
@@ -135,6 +138,21 @@ const SocialNavigator = () => (
       name="ActivityDetail"
       component={ActivityDetailScreen}
       options={{ headerShown: false }}
+    />
+    <SocialStack.Screen
+      name="MyActivities"
+      component={MyActivitiesScreen}
+      options={{ title: "我的動態" }}
+    />
+    <SocialStack.Screen
+      name="FriendsList"
+      component={FriendsListScreen}
+      options={{ title: "好友" }}
+    />
+    <SocialStack.Screen
+      name="FriendsSearch"
+      component={FriendsSearchScreen}
+      options={{ title: "搜尋好友" }}
     />
   </SocialStack.Navigator>
 );

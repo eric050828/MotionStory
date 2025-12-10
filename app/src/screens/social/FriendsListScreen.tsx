@@ -1,0 +1,374 @@
+/**
+ * Friends List Screen
+ * 好友清單頁面 - 管理好友與待處理邀請
+ */
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { ScrollView, RefreshControl, Alert } from 'react-native';
+import { YStack, XStack, Text, Card, Avatar, Button, Spinner } from 'tamagui';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
+import {
+  UserPlus, Users, Clock, Check, X, Trash2
+} from '@tamagui/lucide-icons';
+import { api } from '../../services/api';
+import { useTheme } from '../../../components/theme/useTheme';
+
+interface FriendProfile {
+  user_id: string;
+  display_name: string;
+  avatar_url: string | null;
+  last_workout_at: string | null;
+  total_workouts: number;
+  friendship_since: string;
+  friendship_id?: string;
+}
+
+interface FriendRequest {
+  friendship_id: string;
+  from_user: {
+    user_id: string;
+    display_name: string;
+    avatar_url: string | null;
+  };
+  invited_at: string;
+}
+
+type SocialStackParamList = {
+  Social: undefined;
+  FriendsList: undefined;
+  FriendsSearch: undefined;
+  MyActivities: undefined;
+};
+
+export default function FriendsListScreen() {
+  const navigation = useNavigation<NavigationProp<SocialStackParamList>>();
+  const { theme } = useTheme();
+  const [activeTab, setActiveTab] = useState<'friends' | 'requests'>('friends');
+  const [friends, setFriends] = useState<FriendProfile[]>([]);
+  const [requests, setRequests] = useState<FriendRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [processing, setProcessing] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchFriends = useCallback(async () => {
+    try {
+      const data = await api.getFriends({ status: 'accepted', limit: 100 });
+      setFriends(data.friends || []);
+    } catch (err: any) {
+      console.error('Failed to fetch friends:', err);
+      setError('無法載入好友列表');
+    }
+  }, []);
+
+  const fetchRequests = useCallback(async () => {
+    try {
+      const data = await api.getFriendRequests();
+      setRequests(data.requests || []);
+    } catch (err: any) {
+      console.error('Failed to fetch requests:', err);
+    }
+  }, []);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    await Promise.all([fetchFriends(), fetchRequests()]);
+    setLoading(false);
+  }, [fetchFriends, fetchRequests]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchData();
+    setRefreshing(false);
+  };
+
+  const handleAcceptRequest = async (friendshipId: string) => {
+    setProcessing(friendshipId);
+    try {
+      await api.acceptFriendRequest(friendshipId);
+      setRequests(prev => prev.filter(r => r.friendship_id !== friendshipId));
+      await fetchFriends();
+    } catch (err: any) {
+      console.error('Failed to accept request:', err);
+      Alert.alert('錯誤', '接受邀請失敗');
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  const handleRejectRequest = async (friendshipId: string) => {
+    setProcessing(friendshipId);
+    try {
+      await api.rejectFriendRequest(friendshipId);
+      setRequests(prev => prev.filter(r => r.friendship_id !== friendshipId));
+    } catch (err: any) {
+      console.error('Failed to reject request:', err);
+      Alert.alert('錯誤', '拒絕邀請失敗');
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  const handleRemoveFriend = async (friendshipId: string, displayName: string) => {
+    Alert.alert(
+      '移除好友',
+      `確定要移除 ${displayName} 嗎？`,
+      [
+        { text: '取消', style: 'cancel' },
+        {
+          text: '移除',
+          style: 'destructive',
+          onPress: async () => {
+            setProcessing(friendshipId);
+            try {
+              await api.removeFriend(friendshipId);
+              setFriends(prev => prev.filter(f => f.friendship_id !== friendshipId));
+            } catch (err: any) {
+              console.error('Failed to remove friend:', err);
+              Alert.alert('錯誤', '移除好友失敗');
+            } finally {
+              setProcessing(null);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const formatRelativeTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return '今天';
+    if (diffDays === 1) return '昨天';
+    if (diffDays < 7) return `${diffDays} 天前`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} 週前`;
+    return `${Math.floor(diffDays / 30)} 個月前`;
+  };
+
+  return (
+    <YStack flex={1} backgroundColor={theme.tokens.colors.background}>
+      {/* Tab Selector */}
+      <XStack padding="$4" gap="$2">
+        <Card
+          flex={1}
+          onPress={() => setActiveTab('friends')}
+          backgroundColor={activeTab === 'friends' ? theme.tokens.colors.primary : theme.tokens.colors.background}
+          borderRadius="$3"
+          padding="$3"
+          alignItems="center"
+          borderWidth={1}
+          borderColor={activeTab === 'friends' ? theme.tokens.colors.primary : theme.tokens.colors.border}
+          pressStyle={{ scale: 0.98 }}
+          cursor="pointer"
+        >
+          <XStack alignItems="center" gap="$2">
+            <Users size={18} color={activeTab === 'friends' ? "white" : theme.tokens.colors.mutedForeground} />
+            <Text fontWeight="600" color={activeTab === 'friends' ? "white" : theme.tokens.colors.mutedForeground}>
+              好友 ({friends.length})
+            </Text>
+          </XStack>
+        </Card>
+        <Card
+          flex={1}
+          onPress={() => setActiveTab('requests')}
+          backgroundColor={activeTab === 'requests' ? theme.tokens.colors.primary : theme.tokens.colors.background}
+          borderRadius="$3"
+          padding="$3"
+          alignItems="center"
+          borderWidth={1}
+          borderColor={activeTab === 'requests' ? theme.tokens.colors.primary : theme.tokens.colors.border}
+          pressStyle={{ scale: 0.98 }}
+          cursor="pointer"
+        >
+          <XStack alignItems="center" gap="$2">
+            <Clock size={18} color={activeTab === 'requests' ? "white" : theme.tokens.colors.mutedForeground} />
+            <Text fontWeight="600" color={activeTab === 'requests' ? "white" : theme.tokens.colors.mutedForeground}>
+              邀請 ({requests.length})
+            </Text>
+          </XStack>
+        </Card>
+      </XStack>
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={theme.tokens.colors.primary}
+            colors={[theme.tokens.colors.primary]}
+          />
+        }
+      >
+        <YStack padding="$4" paddingTop={0} gap="$2">
+          {/* Loading State */}
+          {loading && (
+            <YStack alignItems="center" justifyContent="center" paddingVertical="$8">
+              <Spinner size="large" color={theme.tokens.colors.primary} />
+              <Text marginTop="$3" color={theme.tokens.colors.mutedForeground}>載入中...</Text>
+            </YStack>
+          )}
+
+          {/* Error State */}
+          {error && !loading && (
+            <Card backgroundColor={theme.tokens.colors.error + '20'} padding="$4" borderRadius="$4">
+              <Text color={theme.tokens.colors.error} textAlign="center">{error}</Text>
+              <Button marginTop="$3" onPress={fetchData} backgroundColor={theme.tokens.colors.error}>
+                <Text color="white">重試</Text>
+              </Button>
+            </Card>
+          )}
+
+          {/* Friends Tab */}
+          {!loading && activeTab === 'friends' && (
+            <>
+              {friends.length === 0 ? (
+                <YStack alignItems="center" justifyContent="center" paddingVertical="$8" gap="$4">
+                  <Users size={64} color={theme.tokens.colors.mutedForeground} />
+                  <Text fontSize="$5" fontWeight="700" color={theme.tokens.colors.mutedForeground}>還沒有好友</Text>
+                  <Text color={theme.tokens.colors.mutedForeground} textAlign="center">
+                    開始搜尋並添加好友吧！
+                  </Text>
+                  <Button backgroundColor={theme.tokens.colors.primary} onPress={() => navigation.navigate('FriendsSearch')}>
+                    <UserPlus size={20} color="white" />
+                    <Text color="white" marginLeft="$2">搜尋好友</Text>
+                  </Button>
+                </YStack>
+              ) : (
+                friends.map((friend) => (
+                  <Card
+                    key={friend.user_id}
+                    backgroundColor={theme.tokens.colors.card}
+                    padding="$3"
+                    borderRadius="$4"
+                    borderWidth={1}
+                    borderColor={theme.tokens.colors.border}
+                  >
+                    <XStack alignItems="center" gap="$3">
+                      <Avatar circular size="$5" backgroundColor={theme.tokens.colors.muted}>
+                        {friend.avatar_url ? (
+                          <Avatar.Image source={{ uri: friend.avatar_url }} />
+                        ) : (
+                          <Avatar.Fallback>
+                            <Text fontSize="$5" fontWeight="700" color={theme.tokens.colors.foreground}>
+                              {friend.display_name.charAt(0)}
+                            </Text>
+                          </Avatar.Fallback>
+                        )}
+                      </Avatar>
+
+                      <YStack flex={1}>
+                        <Text fontSize="$4" fontWeight="700" color={theme.tokens.colors.foreground}>
+                          {friend.display_name}
+                        </Text>
+                        <Text fontSize="$2" color={theme.tokens.colors.mutedForeground}>
+                          {friend.total_workouts} 次運動
+                          {friend.last_workout_at && ` · 最近 ${formatRelativeTime(friend.last_workout_at)}`}
+                        </Text>
+                      </YStack>
+
+                      <Button
+                        size="$3"
+                        circular
+                        backgroundColor={theme.tokens.colors.error + '20'}
+                        onPress={() => handleRemoveFriend(friend.friendship_id!, friend.display_name)}
+                        disabled={processing === friend.friendship_id}
+                      >
+                        {processing === friend.friendship_id ? (
+                          <Spinner size="small" color={theme.tokens.colors.error} />
+                        ) : (
+                          <Trash2 size={16} color={theme.tokens.colors.error} />
+                        )}
+                      </Button>
+                    </XStack>
+                  </Card>
+                ))
+              )}
+            </>
+          )}
+
+          {/* Requests Tab */}
+          {!loading && activeTab === 'requests' && (
+            <>
+              {requests.length === 0 ? (
+                <YStack alignItems="center" justifyContent="center" paddingVertical="$8" gap="$3">
+                  <Clock size={64} color={theme.tokens.colors.mutedForeground} />
+                  <Text fontSize="$5" fontWeight="700" color={theme.tokens.colors.mutedForeground}>沒有待處理的邀請</Text>
+                  <Text fontSize="$2" color={theme.tokens.colors.mutedForeground} textAlign="center">
+                    當有人向你發送好友邀請時{'\n'}會顯示在這裡
+                  </Text>
+                </YStack>
+              ) : (
+                requests.map((request) => (
+                  <Card
+                    key={request.friendship_id}
+                    backgroundColor={theme.tokens.colors.card}
+                    padding="$3"
+                    borderRadius="$4"
+                    borderWidth={1}
+                    borderColor={theme.tokens.colors.border}
+                  >
+                    <XStack alignItems="center" gap="$3">
+                      <Avatar circular size="$5" backgroundColor={theme.tokens.colors.muted}>
+                        {request.from_user.avatar_url ? (
+                          <Avatar.Image source={{ uri: request.from_user.avatar_url }} />
+                        ) : (
+                          <Avatar.Fallback>
+                            <Text fontSize="$5" fontWeight="700" color={theme.tokens.colors.foreground}>
+                              {request.from_user.display_name.charAt(0)}
+                            </Text>
+                          </Avatar.Fallback>
+                        )}
+                      </Avatar>
+
+                      <YStack flex={1}>
+                        <Text fontSize="$4" fontWeight="700" color={theme.tokens.colors.foreground}>
+                          {request.from_user.display_name}
+                        </Text>
+                        <Text fontSize="$2" color={theme.tokens.colors.mutedForeground}>
+                          {formatRelativeTime(request.invited_at)} 發送邀請
+                        </Text>
+                      </YStack>
+
+                      <XStack gap="$2">
+                        <Button
+                          size="$3"
+                          circular
+                          backgroundColor="#22C55E20"
+                          onPress={() => handleAcceptRequest(request.friendship_id)}
+                          disabled={processing === request.friendship_id}
+                        >
+                          {processing === request.friendship_id ? (
+                            <Spinner size="small" color="#22C55E" />
+                          ) : (
+                            <Check size={16} color="#22C55E" />
+                          )}
+                        </Button>
+                        <Button
+                          size="$3"
+                          circular
+                          backgroundColor={theme.tokens.colors.error + '20'}
+                          onPress={() => handleRejectRequest(request.friendship_id)}
+                          disabled={processing === request.friendship_id}
+                        >
+                          <X size={16} color={theme.tokens.colors.error} />
+                        </Button>
+                      </XStack>
+                    </XStack>
+                  </Card>
+                ))
+              )}
+            </>
+          )}
+        </YStack>
+      </ScrollView>
+    </YStack>
+  );
+}

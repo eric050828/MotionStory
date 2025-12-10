@@ -305,6 +305,87 @@ class ApiService {
     const response = await this.client.post(`/social/activities/${activityId}/comment`, data);
     return response.data;
   }
+
+  async createActivity(data: {
+    activity_type: string;
+    reference_id: string;
+    content?: Record<string, unknown>;
+    image_url?: string;
+    caption?: string;
+  }) {
+    const response = await this.client.post('/social/activities', data);
+    return response.data;
+  }
+
+  // Leaderboard endpoints
+  async getLeaderboard(params?: {
+    period?: 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+    metric?: 'distance' | 'duration' | 'workouts' | 'calories';
+  }) {
+    const response = await this.client.get('/leaderboard', { params });
+    return response.data;
+  }
+
+  // Friends endpoints
+  async searchFriends(queryType: 'user_id' | 'email' | 'qrcode', query: string) {
+    const response = await this.client.post('/friends/search', null, {
+      params: { query_type: queryType, query },
+    });
+    return response.data;
+  }
+
+  async sendFriendInvite(friendId: string) {
+    const response = await this.client.post('/friends/invite', { friend_id: friendId });
+    return response.data;
+  }
+
+  async getFriends(params?: {
+    status?: 'accepted' | 'pending' | 'rejected';
+    limit?: number;
+    offset?: number;
+  }) {
+    const response = await this.client.get('/friends', { params });
+    return response.data;
+  }
+
+  async getFriendRequests() {
+    const response = await this.client.get('/friends/requests');
+    return response.data;
+  }
+
+  async acceptFriendRequest(friendshipId: string) {
+    const response = await this.client.post(`/friends/${friendshipId}/accept`);
+    return response.data;
+  }
+
+  async rejectFriendRequest(friendshipId: string) {
+    const response = await this.client.post(`/friends/${friendshipId}/reject`);
+    return response.data;
+  }
+
+  async removeFriend(friendshipId: string) {
+    await this.client.delete(`/friends/${friendshipId}`);
+  }
+
+  async blockUser(userId: string, reason?: string) {
+    const response = await this.client.post(`/friends/${userId}/block`, { reason });
+    return response.data;
+  }
+
+  // My Activities endpoints
+  async getMyActivities(params?: { limit?: number; cursor?: string }) {
+    const response = await this.client.get('/social/my-activities', { params });
+    return response.data;
+  }
+
+  async updateActivity(activityId: string, data: { caption?: string; image_url?: string }) {
+    const response = await this.client.put(`/social/activities/${activityId}`, data);
+    return response.data;
+  }
+
+  async deleteActivity(activityId: string) {
+    await this.client.delete(`/social/activities/${activityId}`);
+  }
 }
 
 export const api = new ApiService();

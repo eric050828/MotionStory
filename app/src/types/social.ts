@@ -77,3 +77,12 @@ export interface FeedParams {
 export interface CreateCommentRequest {
   content: string;
 }
+
+// 建立動態請求
+export interface CreateActivityRequest {
+  activity_type: ActivityType;
+  reference_id: string;
+  content?: Record<string, unknown>;
+  image_url?: string;
+  caption?: string;
+}

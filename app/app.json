@@ -47,11 +47,20 @@
       "expo-font"
     ],
     "updates": {
-      "enabled": false
+      "enabled": false,
+      "url": "https://u.expo.dev/011d5018-90ed-4da5-aa76-afa60484a1ba"
     },
     "extra": {
-      "eas": {},
-      "apiUrl": "https://motionstory-api.onrender.com/api/v1"
+      "eas": {
+        "projectId": "011d5018-90ed-4da5-aa76-afa60484a1ba"
+      },
+      "apiUrl": "https://motionstory-api.onrender.com/api/v1",
+      "router": {
+        "origin": false
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
     }
   }
 }

@@ -46,6 +46,8 @@ class ActivityCreate(BaseModel):
     activity_type: Literal["workout", "achievement", "challenge"]
     reference_id: str
     content: Optional[dict] = Field(default_factory=dict, description="動態內容快照")
+    image_url: Optional[str] = Field(default=None, description="動態配圖 URL")
+    caption: Optional[str] = Field(default=None, max_length=500, description="使用者短文/心得")
 
 
 class ActivityInDB(ActivityBase):

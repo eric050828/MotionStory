@@ -425,7 +425,7 @@ class FriendService:
                 avatar_url=user.get("avatar_url"),
                 last_workout_at=last_workout["start_time"] if last_workout else None,
                 total_workouts=total_workouts,
-                friendship_since=friendship.get("accepted_at", friendship["invited_at"])
+                friendship_since=friendship.get("accepted_at") or friendship.get("invited_at") or friendship.get("created_at") or datetime.now(timezone.utc)
             ))
 
         return friends, total_count
@@ -511,3 +511,4 @@ class FriendService:
                 friend_ids.add(str(friendship["user_id"]))
 
         return friend_ids
+# Reload trigger Wed, Dec 10, 2025  2:45:54 PM
