@@ -7,7 +7,7 @@
 
 import React, { useEffect, useCallback } from 'react'
 import { StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native'
-import { useNavigation, NavigationProp } from '@react-navigation/native'
+import { useNavigation } from '@react-navigation/native'
 import { YStack, XStack, H2, Text, Button } from 'tamagui'
 import { Users, FileText, Trophy } from '@tamagui/lucide-icons'
 import { useSocialStore } from '../../store/socialStore'
@@ -15,15 +15,8 @@ import { ActivityCard } from '../../../components/social/ActivityCard'
 import { useTheme } from '../../../components/theme/useTheme'
 import type { Activity as ActivityType } from '../../types/social'
 
-type SocialStackParamList = {
-  Social: undefined
-  ActivityDetail: { activity: ActivityType }
-  MyActivities: undefined
-  FriendsList: undefined
-}
-
 export default function SocialScreen() {
-  const navigation = useNavigation<NavigationProp<SocialStackParamList>>()
+  const navigation = useNavigation<any>()
   const { theme } = useTheme()
   const {
     activities,
@@ -65,6 +58,15 @@ export default function SocialScreen() {
     navigation.navigate('ActivityDetail', { activity })
   }, [navigation])
 
+  // Handle user press - navigate to user profile
+  const handleUserPress = useCallback((userId: string) => {
+    try {
+      navigation.navigate('UserProfile', { id: userId })
+    } catch (e) {
+      console.warn('Navigation to user failed:', e)
+    }
+  }, [navigation])
+
   // Render activity item using new ActivityCard
   const renderActivityItem = useCallback(({ item }: { item: ActivityType }) => {
     return (
@@ -72,10 +74,11 @@ export default function SocialScreen() {
         activity={item}
         onLike={() => handleLike(item.activity_id)}
         onCommentPress={() => handleCommentPress(item)}
+        onUserPress={() => handleUserPress(item.user_id)}
         testID={`activity-card-${item.activity_id}`}
       />
     )
-  }, [handleLike, handleCommentPress])
+  }, [handleLike, handleCommentPress, handleUserPress])
 
   // Empty component
   const renderEmpty = () => {

@@ -386,6 +386,33 @@ class ApiService {
   async deleteActivity(activityId: string) {
     await this.client.delete(`/social/activities/${activityId}`);
   }
+
+  // Profile endpoints
+  async getUserProfile(userId: string) {
+    const response = await this.client.get(`/profiles/${userId}`);
+    return response.data;
+  }
+
+  async getMyProfile() {
+    const response = await this.client.get('/profiles/me');
+    return response.data;
+  }
+
+  async updateMyProfile(data: {
+    display_name?: string;
+    avatar_url?: string;
+    privacy_settings?: Record<string, unknown>;
+    preferences?: Record<string, unknown>;
+  }) {
+    const response = await this.client.put('/profiles/me', data);
+    return response.data;
+  }
+
+  // Get user's activities (public activities for profile view)
+  async getUserActivities(userId: string, params?: { limit?: number; cursor?: string }) {
+    const response = await this.client.get(`/social/user/${userId}/activities`, { params });
+    return response.data;
+  }
 }
 
 export const api = new ApiService();

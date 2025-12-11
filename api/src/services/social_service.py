@@ -1,6 +1,7 @@
 """
 Social Service (T239-T241)
 社交互動服務：好友動態牆、按讚留言、內容審核
+Modified: 2025-12-11 - Fixed user_id ObjectId/string compatibility
 """
 from datetime import datetime, timezone
 from typing import List, Optional, Dict
@@ -107,8 +108,11 @@ class SocialService:
         # 組裝回應資料
         response_activities = []
         for activity in activities:
-            # 查詢使用者資料
-            user = await self.users.find_one({"_id": activity["user_id"]})
+            # 查詢使用者資料 - 處理 user_id 可能是 ObjectId 或字串的情況
+            activity_user_id = activity["user_id"]
+            if isinstance(activity_user_id, str):
+                activity_user_id = ObjectId(activity_user_id)
+            user = await self.users.find_one({"_id": activity_user_id})
             if not user:
                 continue
 
@@ -206,17 +210,21 @@ class SocialService:
             )
 
         # 建立新動態
-        activity = ActivityInDB(
-            user_id=ObjectId(user_id),
-            activity_type=activity_type,
-            reference_id=ObjectId(reference_id),
-            content=content or {},
-            image_url=image_url,
-            caption=caption,
-            created_at=datetime.now(timezone.utc)
-        )
+        now = datetime.now(timezone.utc)
+        activity_doc = {
+            "user_id": ObjectId(user_id),
+            "activity_type": activity_type,
+            "reference_id": ObjectId(reference_id),
+            "content": content or {},
+            "image_url": image_url,
+            "caption": caption,
+            "likes_count": 0,
+            "comments_count": 0,
+            "created_at": now,
+            "updated_at": now
+        }
 
-        result = await self.activities.insert_one(activity.dict(by_alias=True, exclude={"id"}))
+        result = await self.activities.insert_one(activity_doc)
 
         user = await self.users.find_one({"_id": ObjectId(user_id)})
 
@@ -233,7 +241,7 @@ class SocialService:
             likes_count=0,
             comments_count=0,
             is_liked_by_me=False,
-            created_at=activity.created_at
+            created_at=now
         )
 
     async def like_activity(
@@ -444,8 +452,8 @@ class SocialService:
 
     # Helper methods
 
-    async def _get_friend_ids(self, user_id: str) -> List[ObjectId]:
-        """取得好友 ID 列表 (包含自己)"""
+    async def _get_friend_ids(self, user_id: str) -> List:
+        """取得好友 ID 列表 (包含自己) - 同時回傳 ObjectId 和字串格式以相容舊資料"""
         friendships_cursor = self.friendships.find({
             "$or": [
                 {"user_id": ObjectId(user_id)},
@@ -455,13 +463,16 @@ class SocialService:
         })
 
         friendships = await friendships_cursor.to_list(length=1000)
-        friend_ids = [ObjectId(user_id)]  # 包含自己的動態
+        # 同時包含 ObjectId 和字串格式以相容舊資料
+        friend_ids = [ObjectId(user_id), user_id]  # 包含自己的動態
 
         for friendship in friendships:
             if str(friendship["user_id"]) == user_id:
-                friend_ids.append(friendship["friend_id"])
+                friend_id = friendship["friend_id"]
+                friend_ids.extend([friend_id, str(friend_id)])
             else:
-                friend_ids.append(friendship["user_id"])
+                friend_id = friendship["user_id"]
+                friend_ids.extend([friend_id, str(friend_id)])
 
         return friend_ids
 
@@ -506,8 +517,8 @@ class SocialService:
         """
         limit = min(limit, 50)
 
-        # 構建查詢條件
-        query = {"user_id": ObjectId(user_id)}
+        # 構建查詢條件 - 同時支援 ObjectId 和字串格式的 user_id (向後相容)
+        query = {"$or": [{"user_id": ObjectId(user_id)}, {"user_id": user_id}]}
 
         # Cursor-based pagination
         if cursor:
@@ -662,3 +673,4 @@ class SocialService:
 
         # 刪除動態
         await self.activities.delete_one({"_id": ObjectId(activity_id)})
+# reload trigger

@@ -1,10 +1,12 @@
 """
 MotionStory API - FastAPI Application Entry Point
-# Reload trigger - v2
+# Reload trigger - v3
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from contextlib import asynccontextmanager
 
 from .core.database import MongoDB
@@ -40,6 +42,16 @@ async def lifespan(app: FastAPI):
     await MongoDB.disconnect()
 
 
+# CORS allowed origins
+CORS_ORIGINS = [
+    "http://localhost:8081",   # Expo web dev
+    "http://localhost:19006",  # Expo web alternate port
+    "http://localhost:3000",   # Local development
+    "http://127.0.0.1:8081",
+    "http://127.0.0.1:19006",
+    "http://127.0.0.1:3000",
+]
+
 app = FastAPI(
     title="MotionStory API",
     description="運動追蹤與動機平台 API",
@@ -49,18 +61,38 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS Configuration
+
+# Custom exception handler to ensure CORS headers are always present
+@app.exception_handler(StarletteHTTPException)
+async def custom_http_exception_handler(request: Request, exc: StarletteHTTPException):
+    """Handle HTTP exceptions with proper CORS headers"""
+    origin = request.headers.get("origin", "")
+
+    response = JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+    )
+
+    # Add CORS headers if origin is allowed
+    if origin in CORS_ORIGINS:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+
+    return response
+
+# T100: Custom Middleware (add first, execute last)
+app.add_middleware(RequestLoggingMiddleware)
+app.add_middleware(ErrorHandlerMiddleware)
+
+# CORS Configuration (add last, execute first - required for proper CORS handling)
+# Note: allow_credentials=True requires specific origins, not wildcard "*"
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # TODO: 限制為特定 domain
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# T100: Custom Middleware
-app.add_middleware(RequestLoggingMiddleware)
-app.add_middleware(ErrorHandlerMiddleware)
 
 # Include routers
 app.include_router(auth_router, prefix="/api/v1")

@@ -43,6 +43,7 @@ import ActivityDetailScreen from "../screens/social/ActivityDetailScreen";
 import MyActivitiesScreen from "../screens/social/MyActivitiesScreen";
 import FriendsListScreen from "../screens/social/FriendsListScreen";
 import FriendsSearchScreen from "../screens/social/FriendsSearchScreen";
+import UserProfileScreen from "../screens/social/UserProfileScreen";
 
 import { WorkoutStackParamList } from "../types/navigation";
 
@@ -153,6 +154,11 @@ const SocialNavigator = () => (
       name="FriendsSearch"
       component={FriendsSearchScreen}
       options={{ title: "搜尋好友" }}
+    />
+    <SocialStack.Screen
+      name="UserProfile"
+      component={UserProfileScreen}
+      options={{ headerShown: false }}
     />
   </SocialStack.Navigator>
 );

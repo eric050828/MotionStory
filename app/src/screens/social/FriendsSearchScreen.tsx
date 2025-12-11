@@ -4,9 +4,10 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { ScrollView, Alert } from 'react-native';
+import { ScrollView, Alert, Pressable } from 'react-native';
 import { YStack, XStack, Text, Card, Avatar, Button, Spinner, Input } from 'tamagui';
 import { useNavigation } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 import {
   Search, Mail, Hash, QrCode, UserPlus, Check
 } from '@tamagui/lucide-icons';
@@ -25,6 +26,7 @@ interface SearchResult {
 
 export default function FriendsSearchScreen() {
   const navigation = useNavigation();
+  const router = useRouter();
   const { theme } = useTheme();
   const [searchType, setSearchType] = useState<SearchType>('email');
   const [query, setQuery] = useState('');
@@ -244,26 +246,30 @@ export default function FriendsSearchScreen() {
                   borderColor={theme.tokens.colors.border}
                 >
                   <XStack alignItems="center" gap="$3">
-                    <Avatar circular size="$5" backgroundColor={theme.tokens.colors.muted}>
-                      {result.avatar_url ? (
-                        <Avatar.Image source={{ uri: result.avatar_url }} />
-                      ) : (
-                        <Avatar.Fallback>
-                          <Text fontSize="$5" fontWeight="700" color={theme.tokens.colors.foreground}>
-                            {result.display_name.charAt(0)}
-                          </Text>
-                        </Avatar.Fallback>
-                      )}
-                    </Avatar>
+                    <Pressable onPress={() => router.push(`/user/${result.user_id}`)}>
+                      <Avatar circular size="$5" backgroundColor={theme.tokens.colors.muted}>
+                        {result.avatar_url ? (
+                          <Avatar.Image source={{ uri: result.avatar_url }} />
+                        ) : (
+                          <Avatar.Fallback>
+                            <Text fontSize="$5" fontWeight="700" color={theme.tokens.colors.foreground}>
+                              {result.display_name.charAt(0)}
+                            </Text>
+                          </Avatar.Fallback>
+                        )}
+                      </Avatar>
+                    </Pressable>
 
-                    <YStack flex={1}>
-                      <Text fontSize="$4" fontWeight="700" color={theme.tokens.colors.foreground}>
-                        {result.display_name}
-                      </Text>
-                      <Text fontSize="$2" color={theme.tokens.colors.mutedForeground}>
-                        {result.total_workouts} 次運動
-                      </Text>
-                    </YStack>
+                    <Pressable style={{ flex: 1 }} onPress={() => router.push(`/user/${result.user_id}`)}>
+                      <YStack>
+                        <Text fontSize="$4" fontWeight="700" color={theme.tokens.colors.foreground}>
+                          {result.display_name}
+                        </Text>
+                        <Text fontSize="$2" color={theme.tokens.colors.mutedForeground}>
+                          {result.total_workouts} 次運動
+                        </Text>
+                      </YStack>
+                    </Pressable>
 
                     {renderStatusButton(result)}
                   </XStack>

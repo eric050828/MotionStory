@@ -4,13 +4,14 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { ScrollView, RefreshControl, Alert } from 'react-native';
+import { ScrollView, RefreshControl, Alert, Pressable } from 'react-native';
 import { YStack, XStack, Text, Card, Avatar, Button, Spinner, Tabs } from 'tamagui';
-import { Stack, useRouter } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 import {
   ChevronLeft, UserPlus, Users, Clock, Check, X, Trash2, Shield
 } from '@tamagui/lucide-icons';
 import { api } from '../../src/services/api';
+import { useTheme } from '../../components/theme/useTheme';
 
 interface FriendProfile {
   user_id: string;
@@ -33,7 +34,8 @@ interface FriendRequest {
 }
 
 export default function FriendsListScreen() {
-  const router = useRouter();
+  const navigation = useNavigation<any>();
+  const { theme } = useTheme();
   const [activeTab, setActiveTab] = useState<'friends' | 'requests'>('friends');
   const [friends, setFriends] = useState<FriendProfile[]>([]);
   const [requests, setRequests] = useState<FriendRequest[]>([]);
@@ -144,22 +146,40 @@ export default function FriendsListScreen() {
   };
 
   return (
-    <YStack flex={1} bg="$background">
-      <Stack.Screen
-        options={{
-          title: '好友',
-          headerLeft: () => (
-            <XStack onPress={() => router.back()} p="$2" cursor="pointer">
-              <ChevronLeft size={24} color="$color" />
-            </XStack>
-          ),
-          headerRight: () => (
-            <XStack onPress={() => router.push('/friends/search')} p="$2" cursor="pointer">
-              <UserPlus size={24} color="$blue10" />
-            </XStack>
-          ),
-        }}
-      />
+    <YStack flex={1} backgroundColor={theme.tokens.colors.background}>
+      {/* Header */}
+      <XStack
+        paddingTop={60}
+        paddingBottom="$3"
+        paddingHorizontal="$4"
+        backgroundColor={theme.tokens.colors.background}
+        borderBottomWidth={1}
+        borderBottomColor={theme.tokens.colors.border}
+        alignItems="center"
+        justifyContent="space-between"
+      >
+        <XStack alignItems="center" gap="$3">
+          <Button
+            size="$3"
+            circular
+            chromeless
+            onPress={() => navigation.goBack()}
+          >
+            <ChevronLeft size={24} color={theme.tokens.colors.foreground} />
+          </Button>
+          <Text fontSize="$6" fontWeight="700" color={theme.tokens.colors.foreground}>
+            好友
+          </Text>
+        </XStack>
+        <Button
+          size="$3"
+          circular
+          chromeless
+          onPress={() => navigation.navigate('FriendsSearch')}
+        >
+          <UserPlus size={24} color={theme.tokens.colors.primary} />
+        </Button>
+      </XStack>
 
       {/* Tab Selector */}
       <XStack p="$4" gap="$2">
@@ -238,7 +258,7 @@ export default function FriendsListScreen() {
                   <Text color="$gray9" ta="center">
                     開始搜尋並添加好友吧！
                   </Text>
-                  <Button bg="$blue10" onPress={() => router.push('/friends/search')}>
+                  <Button bg="$blue10" onPress={() => navigation.navigate('FriendsSearch')}>
                     <UserPlus size={20} color="white" />
                     <Text color="white" ml="$2">搜尋好友</Text>
                   </Button>
@@ -247,27 +267,31 @@ export default function FriendsListScreen() {
                 friends.map((friend) => (
                   <Card key={friend.user_id} bg="$background" p="$3" br="$4" borderWidth={1} borderColor="$borderColor">
                     <XStack ai="center" gap="$3">
-                      <Avatar circular size="$5" bg="$gray5">
-                        {friend.avatar_url ? (
-                          <Avatar.Image source={{ uri: friend.avatar_url }} />
-                        ) : (
-                          <Avatar.Fallback>
-                            <Text fontSize="$5" fontWeight="700" color="$gray11">
-                              {friend.display_name.charAt(0)}
-                            </Text>
-                          </Avatar.Fallback>
-                        )}
-                      </Avatar>
+                      <Pressable onPress={() => navigation.navigate('UserProfile', { id: friend.user_id })}>
+                        <Avatar circular size="$5" bg="$gray5">
+                          {friend.avatar_url ? (
+                            <Avatar.Image source={{ uri: friend.avatar_url }} />
+                          ) : (
+                            <Avatar.Fallback>
+                              <Text fontSize="$5" fontWeight="700" color="$gray11">
+                                {friend.display_name.charAt(0)}
+                              </Text>
+                            </Avatar.Fallback>
+                          )}
+                        </Avatar>
+                      </Pressable>
 
-                      <YStack flex={1}>
-                        <Text fontSize="$4" fontWeight="700" color="$color">
-                          {friend.display_name}
-                        </Text>
-                        <Text fontSize="$2" color="$gray9">
-                          {friend.total_workouts} 次運動
-                          {friend.last_workout_at && ` · 最近 ${formatRelativeTime(friend.last_workout_at)}`}
-                        </Text>
-                      </YStack>
+                      <Pressable style={{ flex: 1 }} onPress={() => navigation.navigate('UserProfile', { id: friend.user_id })}>
+                        <YStack>
+                          <Text fontSize="$4" fontWeight="700" color="$color">
+                            {friend.display_name}
+                          </Text>
+                          <Text fontSize="$2" color="$gray9">
+                            {friend.total_workouts} 次運動
+                            {friend.last_workout_at && ` · 最近 ${formatRelativeTime(friend.last_workout_at)}`}
+                          </Text>
+                        </YStack>
+                      </Pressable>
 
                       <Button
                         size="$3"
@@ -304,26 +328,30 @@ export default function FriendsListScreen() {
                 requests.map((request) => (
                   <Card key={request.friendship_id} bg="$background" p="$3" br="$4" borderWidth={1} borderColor="$borderColor">
                     <XStack ai="center" gap="$3">
-                      <Avatar circular size="$5" bg="$gray5">
-                        {request.from_user.avatar_url ? (
-                          <Avatar.Image source={{ uri: request.from_user.avatar_url }} />
-                        ) : (
-                          <Avatar.Fallback>
-                            <Text fontSize="$5" fontWeight="700" color="$gray11">
-                              {request.from_user.display_name.charAt(0)}
-                            </Text>
-                          </Avatar.Fallback>
-                        )}
-                      </Avatar>
+                      <Pressable onPress={() => navigation.navigate('UserProfile', { id: request.from_user.user_id })}>
+                        <Avatar circular size="$5" bg="$gray5">
+                          {request.from_user.avatar_url ? (
+                            <Avatar.Image source={{ uri: request.from_user.avatar_url }} />
+                          ) : (
+                            <Avatar.Fallback>
+                              <Text fontSize="$5" fontWeight="700" color="$gray11">
+                                {request.from_user.display_name.charAt(0)}
+                              </Text>
+                            </Avatar.Fallback>
+                          )}
+                        </Avatar>
+                      </Pressable>
 
-                      <YStack flex={1}>
-                        <Text fontSize="$4" fontWeight="700" color="$color">
-                          {request.from_user.display_name}
-                        </Text>
-                        <Text fontSize="$2" color="$gray9">
-                          {formatRelativeTime(request.invited_at)} 發送邀請
-                        </Text>
-                      </YStack>
+                      <Pressable style={{ flex: 1 }} onPress={() => navigation.navigate('UserProfile', { id: request.from_user.user_id })}>
+                        <YStack>
+                          <Text fontSize="$4" fontWeight="700" color="$color">
+                            {request.from_user.display_name}
+                          </Text>
+                          <Text fontSize="$2" color="$gray9">
+                            {formatRelativeTime(request.invited_at)} 發送邀請
+                          </Text>
+                        </YStack>
+                      </Pressable>
 
                       <XStack gap="$2">
                         <Button

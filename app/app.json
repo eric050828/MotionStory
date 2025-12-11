@@ -54,7 +54,7 @@
       "eas": {
         "projectId": "011d5018-90ed-4da5-aa76-afa60484a1ba"
       },
-      "apiUrl": "https://motionstory-api.onrender.com/api/v1",
+      "apiUrl": "http://localhost:8000/api/v1",
       "router": {
         "origin": false
       }

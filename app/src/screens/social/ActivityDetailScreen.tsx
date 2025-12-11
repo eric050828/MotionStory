@@ -4,8 +4,9 @@
  */
 
 import React, { useEffect, useState, useCallback } from 'react'
-import { View, StyleSheet, FlatList, ActivityIndicator, KeyboardAvoidingView, Platform, Image, Dimensions } from 'react-native'
+import { View, StyleSheet, FlatList, ActivityIndicator, KeyboardAvoidingView, Platform, Image, Dimensions, Pressable } from 'react-native'
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native'
+import { useRouter } from 'expo-router'
 import { YStack, XStack, H3, Text, Card, Button, Input } from 'tamagui'
 import { useTheme } from '../../../components/theme/useTheme'
 
@@ -35,8 +36,9 @@ type ActivityDetailRouteParams = {
 export default function ActivityDetailScreen() {
   const { theme } = useTheme()
   const navigation = useNavigation()
+  const router = useRouter()
   const route = useRoute<RouteProp<ActivityDetailRouteParams, 'ActivityDetail'>>()
-  const { activity } = route.params
+  const activity = route.params?.activity
 
   const {
     comments,
@@ -49,6 +51,18 @@ export default function ActivityDetailScreen() {
   const [newComment, setNewComment] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [localActivity, setLocalActivity] = useState(activity)
+
+  // Safety check - if no activity, show error or go back
+  if (!activity) {
+    return (
+      <YStack flex={1} backgroundColor={theme.tokens.colors.background} alignItems="center" justifyContent="center">
+        <Text color={theme.tokens.colors.error}>無法載入動態資料</Text>
+        <Button marginTop="$4" onPress={() => navigation.goBack()}>
+          返回
+        </Button>
+      </YStack>
+    )
+  }
 
   // Get loading state for this specific activity
   const isCommentsLoading = commentsLoading[activity.activity_id] || false
@@ -129,16 +143,20 @@ export default function ActivityDetailScreen() {
     <YStack gap="$4" paddingBottom="$4">
       {/* User Info */}
       <XStack alignItems="center" gap="$3">
-        <View style={[styles.avatar, { backgroundColor: theme.tokens.colors.muted }]}>
-          <User size={28} color={theme.tokens.colors.mutedForeground} />
-        </View>
-        <YStack flex={1}>
-          <Text fontWeight="bold" fontSize="$5" color={theme.tokens.colors.foreground}>{localActivity.user_name}</Text>
-          <XStack alignItems="center" gap="$2">
-            {getActivityIcon(localActivity.activity_type)}
-            <Text fontSize="$3" color={theme.tokens.colors.mutedForeground}>{getActivityTypeLabel(localActivity.activity_type)}</Text>
-          </XStack>
-        </YStack>
+        <Pressable onPress={() => router.push(`/user/${localActivity.user_id}`)}>
+          <View style={[styles.avatar, { backgroundColor: theme.tokens.colors.muted }]}>
+            <User size={28} color={theme.tokens.colors.mutedForeground} />
+          </View>
+        </Pressable>
+        <Pressable style={{ flex: 1 }} onPress={() => router.push(`/user/${localActivity.user_id}`)}>
+          <YStack>
+            <Text fontWeight="bold" fontSize="$5" color={theme.tokens.colors.foreground}>{localActivity.user_name}</Text>
+            <XStack alignItems="center" gap="$2">
+              {getActivityIcon(localActivity.activity_type)}
+              <Text fontSize="$3" color={theme.tokens.colors.mutedForeground}>{getActivityTypeLabel(localActivity.activity_type)}</Text>
+            </XStack>
+          </YStack>
+        </Pressable>
         <XStack alignItems="center" gap="$1">
           <Clock size={14} color={theme.tokens.colors.mutedForeground} />
           <Text fontSize="$2" color={theme.tokens.colors.mutedForeground}>

@@ -7,7 +7,7 @@
 
 import React from 'react'
 import { View, Pressable, StyleSheet, Image, Dimensions } from 'react-native'
-import { useRouter } from 'expo-router'
+import { useNavigation } from '@react-navigation/native'
 import { LinearGradient } from 'expo-linear-gradient'
 import {
   Activity,
@@ -39,6 +39,7 @@ interface ActivityCardProps {
   comments?: Comment[]
   onLike: () => void
   onCommentPress: () => void
+  onUserPress?: () => void
   testID?: string
 }
 
@@ -57,13 +58,15 @@ export function ActivityCard({
   comments = [],
   onLike,
   onCommentPress,
+  onUserPress,
   testID,
 }: ActivityCardProps) {
   const { theme } = useTheme()
-  const router = useRouter()
+  const navigation = useNavigation<any>()
 
-  const handleCardPress = () => {
-    router.push(`/social/activity/${activity.activity_id}`)
+  // Navigate to user profile using React Navigation
+  const handleUserPress = () => {
+    navigation.navigate('UserProfile', { id: activity.user_id })
   }
 
   // 取得運動統計
@@ -109,27 +112,29 @@ export function ActivityCard({
     >
       {/* 用戶資訊 Header */}
       <View style={styles.header}>
-        <Pressable onPress={handleCardPress} style={styles.headerLeft}>
-          <UserAvatar
-            uri={activity.user_avatar}
-            name={activity.user_name}
-            size="md"
-          />
-          <View style={styles.headerInfo}>
+        <View style={styles.headerLeft}>
+          <Pressable onPress={handleUserPress}>
+            <UserAvatar
+              uri={activity.user_avatar}
+              name={activity.user_name}
+              size="md"
+            />
+          </Pressable>
+          <Pressable style={styles.headerInfo} onPress={handleUserPress}>
             <Text variant="body" weight="semibold">
               {activity.user_name}
             </Text>
             <Text variant="caption" color="muted">
               {socialService.formatRelativeTime(activity.created_at)}
             </Text>
-          </View>
-        </Pressable>
+          </Pressable>
+        </View>
         <ActivityTypeIcon type={activity.activity_type} size="sm" showBackground />
       </View>
 
       {/* 圖片區域 */}
       {activity.image_url ? (
-        <Pressable onPress={handleCardPress}>
+        <Pressable onPress={onCommentPress}>
           <View style={styles.imageContainer}>
             <Image
               source={{ uri: activity.image_url }}
@@ -186,7 +191,7 @@ export function ActivityCard({
         </Pressable>
       ) : (
         // 無圖片時的備用顯示
-        <Pressable onPress={handleCardPress} style={[styles.noImageContainer, { backgroundColor: theme.tokens.colors.muted + '20' }]}>
+        <Pressable onPress={onCommentPress} style={[styles.noImageContainer, { backgroundColor: theme.tokens.colors.muted + '20' }]}>
           {stats && (
             <View style={styles.noImageStats}>
               <WorkoutIcon size={48} color={theme.tokens.colors.primary} />
