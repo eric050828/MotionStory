@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Alert } from "react-native";
+import { Alert, Platform } from "react-native";
 import {
   Avatar,
   Button,
@@ -144,19 +144,29 @@ const SettingsScreen: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
-    Alert.alert("登出", "確定要登出目前的帳號嗎？", [
-      { text: "取消", style: "cancel" },
-      {
-        text: "登出",
-        style: "destructive",
-        onPress: async () => {
-          setLoading(true);
-          await logout();
-          setLoading(false);
+  const handleLogout = async () => {
+    // Web 平台使用 window.confirm，其他平台使用 Alert.alert
+    if (Platform.OS === "web") {
+      const confirmed = window.confirm("確定要登出目前的帳號嗎？");
+      if (confirmed) {
+        setLoading(true);
+        await logout();
+        setLoading(false);
+      }
+    } else {
+      Alert.alert("登出", "確定要登出目前的帳號嗎？", [
+        { text: "取消", style: "cancel" },
+        {
+          text: "登出",
+          style: "destructive",
+          onPress: async () => {
+            setLoading(true);
+            await logout();
+            setLoading(false);
+          },
         },
-      },
-    ]);
+      ]);
+    }
   };
 
   // 主題切換按鈕 (Segmented Control 風格)

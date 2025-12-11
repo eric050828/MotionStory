@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { Alert, useWindowDimensions } from "react-native";
+import { Alert, useWindowDimensions, Platform } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
@@ -20,6 +20,7 @@ import {
   Settings,
   LayoutGrid,
   Sparkles,
+  Trash2,
   // 新增：用於裝飾卡片的 Widget 類型圖示
   BarChart2,
   Table,
@@ -118,7 +119,7 @@ const DashboardStudioScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const themeValues = useTheme();
   const { theme } = useThemeStore();
-  const { currentDashboard, loading, fetchDefaultDashboard, updateDashboard } =
+  const { currentDashboard, loading, fetchDefaultDashboard, updateDashboard, deleteWidget } =
     useDashboardStore();
 
   const [editMode, setEditMode] = useState(false);
@@ -130,6 +131,35 @@ const DashboardStudioScreen: React.FC = () => {
   const handleAddWidget = () => navigation.navigate("WidgetPicker" as never);
   const handleEditWidget = (widget: Widget) => {
     navigation.navigate("DragDropEditor", { widgetId: widget.id });
+  };
+
+  const handleDeleteWidget = async (widget: Widget) => {
+    if (!currentDashboard) return;
+
+    const confirmDelete = () => {
+      deleteWidget(currentDashboard.id, widget.id);
+    };
+
+    // Web 平台使用 window.confirm，其他平台使用 Alert.alert
+    if (Platform.OS === "web") {
+      const confirmed = window.confirm(`確定要刪除「${widget.title}」嗎？`);
+      if (confirmed) {
+        confirmDelete();
+      }
+    } else {
+      Alert.alert(
+        "刪除 Widget",
+        `確定要刪除「${widget.title}」嗎？`,
+        [
+          { text: "取消", style: "cancel" },
+          {
+            text: "刪除",
+            style: "destructive",
+            onPress: confirmDelete,
+          },
+        ]
+      );
+    }
   };
 
   // 導航到對應的詳情頁面
@@ -346,9 +376,23 @@ const DashboardStudioScreen: React.FC = () => {
 
                         {/* 卡片內容層 */}
                         <YStack p="$3" flex={1} zIndex={1}>
-                          {/* 編輯模式：顯示設定按鈕 */}
+                          {/* 編輯模式：顯示設定與刪除按鈕 */}
                           {editMode && (
-                            <XStack jc="flex-end" mb="$2">
+                            <XStack jc="flex-end" mb="$2" gap="$2">
+                              <Motion.View whileTap={{ scale: 0.9 }}>
+                                <Button
+                                  size="$2"
+                                  circular
+                                  icon={Trash2}
+                                  bg="rgba(239,68,68,0.9)"
+                                  color="white"
+                                  elevation={2}
+                                  onPress={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteWidget(widget);
+                                  }}
+                                />
+                              </Motion.View>
                               <Motion.View whileTap={{ rotate: 90 }}>
                                 <Button
                                   size="$2"

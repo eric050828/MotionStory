@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { FlatList, RefreshControl, Alert, Image } from 'react-native';
+import { FlatList, RefreshControl, Alert, Image, Platform } from 'react-native';
 import { YStack, XStack, Text, Card, Button, Spinner, Input, TextArea } from 'tamagui';
 import { useNavigation } from '@react-navigation/native';
 import {
@@ -105,30 +105,47 @@ export default function MyActivitiesScreen() {
     }
   };
 
-  const handleDelete = (activity: ActivityType) => {
-    Alert.alert(
-      '刪除動態',
-      '確定要刪除這則動態嗎？此操作無法復原。',
-      [
-        { text: '取消', style: 'cancel' },
-        {
-          text: '刪除',
-          style: 'destructive',
-          onPress: async () => {
-            setDeleting(activity.activity_id);
-            try {
-              await api.deleteActivity(activity.activity_id);
-              setActivities(prev => prev.filter(a => a.activity_id !== activity.activity_id));
-            } catch (err: any) {
-              console.error('Failed to delete activity:', err);
-              Alert.alert('錯誤', '刪除動態失敗');
-            } finally {
-              setDeleting(null);
+  const handleDelete = async (activity: ActivityType) => {
+    // Web 平台使用 window.confirm，其他平台使用 Alert.alert
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm('確定要刪除這則動態嗎？此操作無法復原。');
+      if (confirmed) {
+        setDeleting(activity.activity_id);
+        try {
+          await api.deleteActivity(activity.activity_id);
+          setActivities(prev => prev.filter(a => a.activity_id !== activity.activity_id));
+        } catch (err: any) {
+          console.error('Failed to delete activity:', err);
+          window.alert('刪除動態失敗');
+        } finally {
+          setDeleting(null);
+        }
+      }
+    } else {
+      Alert.alert(
+        '刪除動態',
+        '確定要刪除這則動態嗎？此操作無法復原。',
+        [
+          { text: '取消', style: 'cancel' },
+          {
+            text: '刪除',
+            style: 'destructive',
+            onPress: async () => {
+              setDeleting(activity.activity_id);
+              try {
+                await api.deleteActivity(activity.activity_id);
+                setActivities(prev => prev.filter(a => a.activity_id !== activity.activity_id));
+              } catch (err: any) {
+                console.error('Failed to delete activity:', err);
+                Alert.alert('錯誤', '刪除動態失敗');
+              } finally {
+                setDeleting(null);
+              }
             }
           }
-        }
-      ]
-    );
+        ]
+      );
+    }
   };
 
   const getActivityIcon = (type: ActivityType['activity_type']) => {
