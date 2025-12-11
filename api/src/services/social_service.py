@@ -604,8 +604,15 @@ class SocialService:
         if not activity:
             raise ValueError("Activity not found")
 
-        # 檢查權限
-        if str(activity["user_id"]) != user_id:
+        # 檢查權限 - 支援 ObjectId 和 string 兩種格式
+        activity_user_id = activity["user_id"]
+        is_owner = (
+            str(activity_user_id) == user_id or
+            str(activity_user_id) == str(user_id) or
+            (isinstance(activity_user_id, ObjectId) and str(activity_user_id) == user_id) or
+            (isinstance(activity_user_id, str) and activity_user_id == user_id)
+        )
+        if not is_owner:
             raise ValueError("No permission to update this activity")
 
         # 更新資料
@@ -661,8 +668,15 @@ class SocialService:
         if not activity:
             raise ValueError("Activity not found")
 
-        # 檢查權限
-        if str(activity["user_id"]) != user_id:
+        # 檢查權限 - 支援 ObjectId 和 string 兩種格式
+        activity_user_id = activity["user_id"]
+        is_owner = (
+            str(activity_user_id) == user_id or
+            str(activity_user_id) == str(user_id) or
+            (isinstance(activity_user_id, ObjectId) and str(activity_user_id) == user_id) or
+            (isinstance(activity_user_id, str) and activity_user_id == user_id)
+        )
+        if not is_owner:
             raise ValueError("No permission to delete this activity")
 
         # 刪除相關的按讚
